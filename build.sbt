@@ -25,6 +25,6 @@ libraryDependencies ++= (
 
 libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _ % "compile")
 
-//libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "test")
+libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "test")
 
 addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full)
