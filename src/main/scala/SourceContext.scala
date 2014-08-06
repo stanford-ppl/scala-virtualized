@@ -39,6 +39,9 @@ object SourceContext {
 
   var debug = false
 
+  // TODO: implementation missing, so temporary dummy source context for now
+  implicit val dummySourceContext: SourceContext = apply("dummy", Nil)
+
   def apply(name: String, sourceInfo: List[(String, Int)]): SourceContext =
     apply("<unknown file>", name, sourceInfo)
 
