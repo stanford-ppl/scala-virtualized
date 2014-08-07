@@ -170,9 +170,14 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           // should not be and vice-versa).  So until we have decided
           // how proper virtualization of case classes should be done,
           // any attempt to do so should fail.
-          println(tree)
-          c.abort(tree.pos, "virtualization of case classes is not supported.")
-
+          // TR: not 100% sure what the issue is (although i vaguely
+          // remember that we had issues in Scala-Virtualized with 
+          // auto-generated case class equality methods using virtualized
+          // equality where it shouldn't). For the moment it seems like 
+          // just treating case classes as regular classes works fine.
+          //println(tree)
+          c.warning(tree.pos, "virtualization of case classes is not fully supported.")
+          super.transform(tree) 
         case _ =>
           super.transform(tree)
       }
