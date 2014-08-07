@@ -124,6 +124,21 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     defaultEqualsTest(true, true) should be(true)
   }
 
+  "guardEqualsTest" should "be virtualized" in {
+    def guardEqualsSanityTest(xs: List[Boolean], ys: List[Boolean]) = (xs,ys) match {
+      case (x::xs, y::ys) if infix_==(xs,ys) => true
+      case _ => false
+    }
+
+    @virtualize
+    def guardEqualsTest(xs: List[Boolean], ys: List[Boolean]) = (xs,ys) match {
+      case (x::xs, y::ys) if xs==ys => true
+      case _ => false
+    }
+    guardEqualsSanityTest(List(false, true, false), List(true, true)) should be(true)
+    guardEqualsTest(List(false, true, false), List(true, true)) should be(true)
+  }
+
   "parameter of virtualizeParamTest" should "not be virtualized" in {
 
     val c = false
