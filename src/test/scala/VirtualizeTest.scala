@@ -161,4 +161,11 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
       case MyException(e) => e should be("nope")
     }
   }
+
+  "isInstanceOf and asInstanceOf" should "not be virtualized" in {
+    @virtualize
+    def virtualizeInstanceOf(o: Object) = if (o.isInstanceOf[String]) o.asInstanceOf[String] else null
+    virtualizeInstanceOf("hello") should be("hello")
+    virtualizeInstanceOf(Nil) should be(null)
+  }
 }
