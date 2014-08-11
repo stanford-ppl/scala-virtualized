@@ -9,10 +9,6 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     if (cs forall (_ == true)) tb else eb
   }
 
-  def infix_+[T](x1: List[T], x2: Any): String = {
-    x1.toString+"+"+x2.toString
-  }
-
   def infix_==[T](x1: List[T], x2: List[T]): Boolean = {
     (x1 zip x2) forall (p => p._1 == p._2)
   }
@@ -94,19 +90,6 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
     virtualizeInnerIfTest(false) should be("yep")
     virtualizeInnerIfTest(true) should be("nope")
-  }
-
-  "numericPlusTest" should "not be virtualized" in {
-    def numericPlusTest(a: Int, b: Int): Int = a+b
-    numericPlusTest(1, 2) should be(3)
-  }
-
-  "virtualizePlusTest" should "be virtualized" in {
-    @virtualize
-    def virtualizePlusTest(a: List[Boolean], b: Any) = a+b
-
-    virtualizePlusTest(List(false), "you") should be("List(false)+you")
-    virtualizePlusTest(List(false), 1) should be("List(false)+1")
   }
 
   "virtualizeEqualsTest" should "be virtualized" in {
