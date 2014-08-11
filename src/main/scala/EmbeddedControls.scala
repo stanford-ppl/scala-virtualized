@@ -49,7 +49,7 @@ trait EmbeddedControls {
   def __newVar[T](init: T): T = macro newVarImpl[T]
 
   // Poor man's infix methods for `Any` methods
-  def infix_+(x1: Any, x2: Any): Any = macro any_+
+  def infix_+(x1: String, x2: Any): String = macro any_+
   def infix_==(x1: Any, x2: Any): Boolean = macro any_==
   def infix_!=(x1: Any, x2: Any): Boolean = macro any_!=
   def infix_##(x: Any): Int = macro any_##
@@ -121,7 +121,7 @@ private object EmbeddedControls {
   // Poor man's infix methods for `Any` methods
 
   def any_+(c: Context)(
-    x1: c.Expr[Any], x2: c.Expr[Any]): c.Expr[Any] = {
+    x1: c.Expr[String], x2: c.Expr[Any]): c.Expr[String] = {
 
     import c.universe._
     c.Expr(q"$x1.+($x2)")
