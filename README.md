@@ -49,4 +49,5 @@ https://github.com/scala-lms/summer-of-lms-2014/tree/scala-virtualized/ISSUES
   * Only commit and push when `sbt test` is completely green. Travis watches.
   * Use `NOTE(trans)` and `TODO(trans)` in comments to document anything related to the transition.
   * Use `TODO(cleanup)` in comments to document anything that you notice that needs fixing but is unrelated to the transition.
+  * See the [`macro-trans` branch history](https://github.com/TiarkRompf/virtualization-lms-core/commits/macro-trans) for some inspiration.
  
