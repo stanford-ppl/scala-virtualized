@@ -100,8 +100,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           List()), Literal(Constant(()))))) if label == sym => // do while(){}
           liftFeature(None, "__doWhile", List(cond, body))
 
-        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
-          liftFeature(None, "infix_$plus", List(qualifier, arg))
+//        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
+//          liftFeature(None, "infix_$plus", List(qualifier, arg))
 
         case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
           liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
