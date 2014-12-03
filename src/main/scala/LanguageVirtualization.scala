@@ -73,7 +73,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
       method(receiver.map(transform), nme, List(args.map(transform)), targs)
     }
 
-    override def transform(tree: Tree): Tree = {
+    override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
         // sstucki: It seems necessary to keep the MUTABLE flag in the
         // new ValDef set, otherwise it becomes tricky to
