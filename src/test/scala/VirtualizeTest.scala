@@ -102,11 +102,17 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   "virtualizePlusTest" should "be virtualized" in {
-    @virtualize
-    def virtualizePlusTest(a: List[Boolean], b: Any) = a+b
 
-    virtualizePlusTest(List(false), "you") should be("List(false)+you")
-    virtualizePlusTest(List(false), 1) should be("List(false)+1")
+    @virtualize
+    def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "literal"+b will be virtualized!
+    virtualizePlusTest("you", List(false)) should be("youList(false)")
+    //virtualizePlusTest(List(false), 1) should be("List(false)+1")
+  }
+
+  "virtualizePlusTestStringLiteral" should "be virtualized" in {
+    @virtualize
+    def virtualizePlusTest(a: Any) = "test" + a
+    virtualizePlusTest(List(false)) should be("testList(false)")
   }
 
   "virtualizeEqualsTest" should "be virtualized" in {
