@@ -83,6 +83,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
+        // TODO: what about variable reads?
+
         case t @ If(cond, thenBr, elseBr) =>
           liftFeature(None, "__ifThenElse", List(cond, thenBr, elseBr))
 
@@ -99,6 +101,11 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case LabelDef(sym, List(), Block(body :: Nil, If(cond, Apply(Ident(label),
           List()), Literal(Constant(()))))) if label == sym => // do while(){}
           liftFeature(None, "__doWhile", List(cond, body))
+
+        // only rewrite + to infix_+ if lhs is a String *literal* (we can't look at types!)
+        // TODO: note that this is not sufficient to handle "foo: " + x + "," + y
+        case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
+          liftFeature(None, "infix_$plus", List(qual, arg))
 
 //        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
 //          liftFeature(None, "infix_$plus", List(qualifier, arg))
