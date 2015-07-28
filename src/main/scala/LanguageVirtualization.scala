@@ -106,7 +106,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         // TODO: note that this is not sufficient to handle "foo: " + x + "," + y
         case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
           liftFeature(None, "infix_$plus", List(qual, arg))
-
 //        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
 //          liftFeature(None, "infix_$plus", List(qualifier, arg))
 

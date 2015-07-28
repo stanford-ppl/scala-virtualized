@@ -102,17 +102,23 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   "virtualizePlusTest" should "be virtualized" in {
-
+    def infix_+(a1: Any, a2: Any) = a2.toString + a1 //+ on Any is not virtualized!
     @virtualize
-    def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "literal"+b will be virtualized!
+    def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "StringLiteral"+b will be virtualized!
     virtualizePlusTest("you", List(false)) should be("youList(false)")
-    //virtualizePlusTest(List(false), 1) should be("List(false)+1")
+  }
+
+  "virtualizeAnyPlusTest" should "not be virtualized" in {
+    @virtualize
+    def virtualizePlusTest(a: Any, b: List[Boolean]) = a.toString + b //only "literal"+b will be virtualized!
+    virtualizePlusTest("you", List(false)) should be("youList(false)")
   }
 
   "virtualizePlusTestStringLiteral" should "be virtualized" in {
+    def infix_+(s: String, a: Any) = a.toString + s //no need to overwrite?
     @virtualize
     def virtualizePlusTest(a: Any) = "test" + a
-    virtualizePlusTest(List(false)) should be("testList(false)")
+    virtualizePlusTest(List(false)) should be("List(false)test") //check that call is actually intercepted
   }
 
   "virtualizeEqualsTest" should "be virtualized" in {
