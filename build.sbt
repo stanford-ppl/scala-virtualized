@@ -2,7 +2,7 @@ name := "scala-virtualized"
 
 organization := "org.scala-lang.virtualized"
 
-version := "0.0.1-SNAPSHOT"
+version := "1.2.0-SNAPSHOT"
 
 scalaVersion := "2.11.2"
 

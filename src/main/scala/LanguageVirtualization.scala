@@ -1,5 +1,6 @@
 package org.scala_lang.virtualized
 
+import scala.collection.generic.MutableMapFactory
 import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
 import scala.collection.mutable
@@ -73,6 +74,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
       method(receiver.map(transform), nme, List(args.map(transform)), targs)
     }
 
+    var mapping = new mutable.HashMap[String, Any]()
+
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
         // sstucki: It seems necessary to keep the MUTABLE flag in the
@@ -80,6 +83,58 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         // "un-virtualize" a variable definition, if necessary
         // (e.g. if the DSL does not handle variable definitions in a
         // special way).
+
+        /**
+         * given `def OptiML[R](b: => R) = new Scope[OptiML, OptiMLExp, R](b)`
+         *
+         * `OptiML { body }` is expanded to:
+         *
+         *  trait DSLprog$ extends OptiML {
+         *    def apply = body
+         *  }
+         *  (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
+         *
+         *
+         */
+        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(interf), Ident(impl), Ident(result)))), t @ termNames.CONSTRUCTOR), treeList) =>
+          c.warning(tree.pos, s"CATCH THIS: new Scope[$interf, $impl, $result]($treeList)")
+          c.warning(tree.pos, s"trait DSLprog extends $interf {def apply = $treeList}")
+//          q"""{b: Unit =>
+//             trait DSLProg extends $interf {def apply = b}
+//             new DSLProg with $impl
+//             }"""
+          Function( List(ValDef(Modifiers(Flag.PARAM), TermName("b"), Ident(TypeName("Unit")), EmptyTree)),
+                    Block(List(
+                      q"trait DSLprog "
+//                      ClassDef(Modifiers(Flag.ABSTRACT | /*Flag.DEFAULTPARAM*/ Flag.TRAIT), TypeName("DSLprog"), List(),
+//                        Template(List(Ident(TypeName("OptiML"))), noSelfType,
+//                          List(DefDef(Modifiers(), TermName("$init$"), List(), List(List()), TypeTree(), Block(List(), Literal(Constant(())))), DefDef(Modifiers(), TermName("apply"), List(), List(), TypeTree(), Ident(TermName("b"))))))
+                    ),
+                      Block(List(
+                        ClassDef(Modifiers(Flag.FINAL), TypeName("$anon"), List(),
+                          Template(List(Ident(TypeName("DSLprog")), Ident(TypeName("OptiMLExp"))), noSelfType,
+                            List(DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List()), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))))))),
+                        Apply(Select(New(Ident(TypeName("$anon"))), termNames.CONSTRUCTOR), List())//termNames.))
+                      )))//, ....
+//        case Apply(tre, listTrees) =>
+//          c.warning(tree.pos, "CATCH ALL!")
+//          super.transform(tree)
+        case a @ Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(interf), Ident(impl), Ident(result)) //List(Ident(TypeName("OptiML")), Ident(TypeName("OptiMLExp")), Ident(TypeName("R")))
+                                              )), termNames.CONSTRUCTOR), List(Ident(TermName("b")))) =>
+          //c.warning(tree.pos, s"YOU ARE TRYING TO VIRTUALIZE $a")
+          //ClassDef(Modifiers, TypeName, tparams: List[.TypeDef], Template)
+          //Template(parents: List[Tree], self: ValDef, body: List[Tree])
+          val res = ClassDef(Modifiers(Flag.ABSTRACT | Flag.INTERFACE | Flag.TRAIT), TypeName("DSLprogXXX"), List(),
+            Template(List(Ident(interf)), noSelfType, List())
+          )
+          //Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(TypeName("OptiML")), Ident(TypeName("OptiMLExp")), Ident(TypeName("Unit"))))), termNames.CONSTRUCTOR), List(Ident(TermName("body"))))
+
+          //ClassDef(Modifiers(), TypeName("Scope"), List(TypeDef(Modifiers(PARAM), TypeName("A"), List(), TypeBoundsTree(EmptyTree, EmptyTree)), TypeDef(Modifiers(PARAM), TypeName("B"), List(), TypeBoundsTree(EmptyTree, EmptyTree)), TypeDef(Modifiers(PARAM), TypeName("C"), List(), TypeBoundsTree(EmptyTree, EmptyTree))), Template(List(Ident(TypeName("OptiML"))), noSelfType, List(ValDef(Modifiers(PRIVATE | BYNAMEPARAM/CAPTURED/COVARIANT | LOCAL | PARAMACCESSOR), TermName("b"), AppliedTypeTree(Select(Select(Ident(termNames.ROOTPKG), TermName("scala")), TypeName("<byname>")), List(Ident(TypeName("C")))), EmptyTree), DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List(ValDef(Modifiers(PARAM | BYNAMEPARAM/CAPTURED/COVARIANT | PARAMACCESSOR), TermName("b"), AppliedTypeTree(Select...
+          c.warning(tree.pos, "CATCH THIS :\r\n"+showRaw(res))
+          super.transform(tree)
+          //res
+
+          //trait DSLprog$ extends OptiML {def apply = body}
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
@@ -108,6 +163,9 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           liftFeature(None, "infix_$plus", List(qual, arg))
 //        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
 //          liftFeature(None, "infix_$plus", List(qualifier, arg))
+
+//        case Apply(sym1 @ Ident(termName: TermName), List(arg)) => //sinbgle argument?
+//          ???
 
         case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
           liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
