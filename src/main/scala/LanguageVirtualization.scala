@@ -93,29 +93,46 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
          *    def apply = body
          *  }
          *  (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
-         *
+
          *
          */
+         //def apply[A,B,R](b: => R) = new Scope[A,B,R](b)
+        case  DefDef(modifiers, tnApply,
+          List(TypeDef(modifA, tnA1, _, _), TypeDef(modifB, tnB1, _, _), TypeDef(modifR, tnR1, List(), TypeBoundsTree(EmptyTree, EmptyTree))),
+          List(List(ValDef(Modifiers(Flag.PARAM | Flag.BYNAMEPARAM /*/CAPTURED/COVARIANT*/), tnb1, AppliedTypeTree(Select(Select(Ident(termNames.ROOTPKG), TermName("scala")), TypeName("<byname>")), List(Ident(tnRA))), EmptyTree))),
+          TypeTree(),
+          Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(tnA2), Ident(tnB2), Ident(tnR2)))), termNames.CONSTRUCTOR), List(Ident(tnb2)))) =>
+          c.warning(tree.pos, s"CATCH THIS: first case")
+            q"""
+              def $tnApply[$tnA1,$tnB1,$tnR1]($tnb1: => ${tnRA.asInstanceOf[TypeName]}) = {
+                trait DSLProg extends ${tnA2.asInstanceOf[TypeName]} {def apply = ${tnb2.asInstanceOf[TermName]}}
+                new DSLProg with ${tnB2.asInstanceOf[TypeName]}
+              }
+             """
+
         case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(interf), Ident(impl), Ident(result)))), t @ termNames.CONSTRUCTOR), treeList) =>
           c.warning(tree.pos, s"CATCH THIS: new Scope[$interf, $impl, $result]($treeList)")
-          c.warning(tree.pos, s"trait DSLprog extends $interf {def apply = $treeList}")
-//          q"""{b: Unit =>
-//             trait DSLProg extends $interf {def apply = b}
-//             new DSLProg with $impl
-//             }"""
-          Function( List(ValDef(Modifiers(Flag.PARAM), TermName("b"), Ident(TypeName("Unit")), EmptyTree)),
-                    Block(List(
-                      q"trait DSLprog "
-//                      ClassDef(Modifiers(Flag.ABSTRACT | /*Flag.DEFAULTPARAM*/ Flag.TRAIT), TypeName("DSLprog"), List(),
-//                        Template(List(Ident(TypeName("OptiML"))), noSelfType,
-//                          List(DefDef(Modifiers(), TermName("$init$"), List(), List(List()), TypeTree(), Block(List(), Literal(Constant(())))), DefDef(Modifiers(), TermName("apply"), List(), List(), TypeTree(), Ident(TermName("b"))))))
-                    ),
-                      Block(List(
-                        ClassDef(Modifiers(Flag.FINAL), TypeName("$anon"), List(),
-                          Template(List(Ident(TypeName("DSLprog")), Ident(TypeName("OptiMLExp"))), noSelfType,
-                            List(DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List()), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))))))),
-                        Apply(Select(New(Ident(TypeName("$anon"))), termNames.CONSTRUCTOR), List())//termNames.))
-                      )))//, ....
+          //in a quasiquote how to differentiate between a block and a function body?
+          q"""{
+             trait DSLProg extends ${interf.asInstanceOf[TypeName]} {def apply = b} //TODO
+             val dsl = new DSLProg with ${impl.asInstanceOf[TypeName]} {}
+             dsl.apply
+             }"""
+        //
+        //
+//          Function( List(ValDef(Modifiers(Flag.PARAM), TermName("b"), Ident(TypeName("Unit")), EmptyTree)),
+//                    Block(List(
+//                      q"trait DSLprog "
+////                      ClassDef(Modifiers(Flag.ABSTRACT | /*Flag.DEFAULTPARAM*/ Flag.TRAIT), TypeName("DSLprog"), List(),
+////                        Template(List(Ident(TypeName("OptiML"))), noSelfType,
+////                          List(DefDef(Modifiers(), TermName("$init$"), List(), List(List()), TypeTree(), Block(List(), Literal(Constant(())))), DefDef(Modifiers(), TermName("apply"), List(), List(), TypeTree(), Ident(TermName("b"))))))
+//                    ),
+//                      Block(List(
+//                        ClassDef(Modifiers(Flag.FINAL), TypeName("$anon"), List(),
+//                          Template(List(Ident(TypeName("DSLprog")), Ident(TypeName("OptiMLExp"))), noSelfType,
+//                            List(DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List()), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))))))),
+//                        Apply(Select(New(Ident(TypeName("$anon"))), termNames.CONSTRUCTOR), List())//termNames.))
+//                      )))//, ....
 //        case Apply(tre, listTrees) =>
 //          c.warning(tree.pos, "CATCH ALL!")
 //          super.transform(tree)
