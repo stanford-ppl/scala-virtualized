@@ -2,7 +2,7 @@ name := "scala-virtualized"
 
 organization := "org.scala-lang.virtualized"
 
-version := "1.2.0-SNAPSHOT"
+version := "1.0.0-macrovirt"
 
 scalaVersion := "2.11.2"
 
@@ -23,8 +23,8 @@ libraryDependencies ++= (
   else Nil
 )
 
-libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _ % "compile")
+libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % "compile"
 
-libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "test")
+libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % "test"
 
 addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full)

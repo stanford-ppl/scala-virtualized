@@ -1,0 +1,5 @@
+# Any path containing "target"
+target
+
+# IntelliJ project files
+.idea/
