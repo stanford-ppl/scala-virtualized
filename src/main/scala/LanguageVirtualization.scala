@@ -89,69 +89,23 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
          *
          * `OptiML { body }` is expanded to:
          *
-         *  trait DSLprog$ extends OptiML {
-         *    def apply = body
-         *  }
+         *  trait DSLprog$ extends OptiML {def apply = body}
          *  (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
-
          *
+         * OptiML    => List(Ident(TypeName("T")))
+         * OptiML[T] => AppliedTypeTree(Ident(TypeName("T")), List(Ident(TypeName("P"))))
          */
-         //def apply[A,B,R](b: => R) = new Scope[A,B,R](b)
-        case  DefDef(modifiers, tnApply,
-          List(TypeDef(modifA, tnA1, _, _), TypeDef(modifB, tnB1, _, _), TypeDef(modifR, tnR1, List(), TypeBoundsTree(EmptyTree, EmptyTree))),
-          List(List(ValDef(Modifiers(Flag.PARAM | Flag.BYNAMEPARAM /*/CAPTURED/COVARIANT*/), tnb1, AppliedTypeTree(Select(Select(Ident(termNames.ROOTPKG), TermName("scala")), TypeName("<byname>")), List(Ident(tnRA))), EmptyTree))),
-          TypeTree(),
-          Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(tnA2), Ident(tnB2), Ident(tnR2)))), termNames.CONSTRUCTOR), List(Ident(tnb2)))) =>
-          c.warning(tree.pos, s"CATCH THIS: first case")
-            q"""
-              def $tnApply[$tnA1,$tnB1,$tnR1]($tnb1: => ${tnRA.asInstanceOf[TypeName]}) = {
-                trait DSLProg extends ${tnA2.asInstanceOf[TypeName]} {def apply = ${tnb2.asInstanceOf[TermName]}}
-                new DSLProg with ${tnB2.asInstanceOf[TypeName]}
-              }
-             """
 
-        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(interf), Ident(impl), Ident(result)))), t @ termNames.CONSTRUCTOR), treeList) =>
-          c.warning(tree.pos, s"CATCH THIS: new Scope[$interf, $impl, $result]($treeList)")
-          //in a quasiquote how to differentiate between a block and a function body?
-          q"""{
-             trait DSLProg extends ${interf.asInstanceOf[TypeName]} {def apply = b} //TODO
-             val dsl = new DSLProg with ${impl.asInstanceOf[TypeName]} {}
-             dsl.apply
-             }"""
-        //
-        //
-//          Function( List(ValDef(Modifiers(Flag.PARAM), TermName("b"), Ident(TypeName("Unit")), EmptyTree)),
-//                    Block(List(
-//                      q"trait DSLprog "
-////                      ClassDef(Modifiers(Flag.ABSTRACT | /*Flag.DEFAULTPARAM*/ Flag.TRAIT), TypeName("DSLprog"), List(),
-////                        Template(List(Ident(TypeName("OptiML"))), noSelfType,
-////                          List(DefDef(Modifiers(), TermName("$init$"), List(), List(List()), TypeTree(), Block(List(), Literal(Constant(())))), DefDef(Modifiers(), TermName("apply"), List(), List(), TypeTree(), Ident(TermName("b"))))))
-//                    ),
-//                      Block(List(
-//                        ClassDef(Modifiers(Flag.FINAL), TypeName("$anon"), List(),
-//                          Template(List(Ident(TypeName("DSLprog")), Ident(TypeName("OptiMLExp"))), noSelfType,
-//                            List(DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List()), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))))))),
-//                        Apply(Select(New(Ident(TypeName("$anon"))), termNames.CONSTRUCTOR), List())//termNames.))
-//                      )))//, ....
-//        case Apply(tre, listTrees) =>
-//          c.warning(tree.pos, "CATCH ALL!")
-//          super.transform(tree)
-        case a @ Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(interf), Ident(impl), Ident(result)) //List(Ident(TypeName("OptiML")), Ident(TypeName("OptiMLExp")), Ident(TypeName("R")))
-                                              )), termNames.CONSTRUCTOR), List(Ident(TermName("b")))) =>
-          //c.warning(tree.pos, s"YOU ARE TRYING TO VIRTUALIZE $a")
-          //ClassDef(Modifiers, TypeName, tparams: List[.TypeDef], Template)
-          //Template(parents: List[Tree], self: ValDef, body: List[Tree])
-          val res = ClassDef(Modifiers(Flag.ABSTRACT | Flag.INTERFACE | Flag.TRAIT), TypeName("DSLprogXXX"), List(),
-            Template(List(Ident(interf)), noSelfType, List())
-          )
-          //Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(TypeName("OptiML")), Ident(TypeName("OptiMLExp")), Ident(TypeName("Unit"))))), termNames.CONSTRUCTOR), List(Ident(TermName("body"))))
+        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), List(tnBlock)) =>
+          val x = q"""{
+            trait DSLprog extends $tn1 {def apply = $tnBlock } //TODO(trans): super.transform(tnBlock) ???
+            //(new DSLprog with OptiMLExp): OptiML with OptiMLExp
+            val dsl = new DSLprog with $tn2 //: {tn1.asInstanceOf[TypeName]} with {tn2.asInstanceOf[TypeName]}
+            dsl.apply //just for testing purposes
+          }"""
+          c.warning(tree.pos, s"CATCH THIS: newer case \n raw: "+showRaw(x)+"\n code: "+showCode(x))
+          x
 
-          //ClassDef(Modifiers(), TypeName("Scope"), List(TypeDef(Modifiers(PARAM), TypeName("A"), List(), TypeBoundsTree(EmptyTree, EmptyTree)), TypeDef(Modifiers(PARAM), TypeName("B"), List(), TypeBoundsTree(EmptyTree, EmptyTree)), TypeDef(Modifiers(PARAM), TypeName("C"), List(), TypeBoundsTree(EmptyTree, EmptyTree))), Template(List(Ident(TypeName("OptiML"))), noSelfType, List(ValDef(Modifiers(PRIVATE | BYNAMEPARAM/CAPTURED/COVARIANT | LOCAL | PARAMACCESSOR), TermName("b"), AppliedTypeTree(Select(Select(Ident(termNames.ROOTPKG), TermName("scala")), TypeName("<byname>")), List(Ident(TypeName("C")))), EmptyTree), DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List(ValDef(Modifiers(PARAM | BYNAMEPARAM/CAPTURED/COVARIANT | PARAMACCESSOR), TermName("b"), AppliedTypeTree(Select...
-          c.warning(tree.pos, "CATCH THIS :\r\n"+showRaw(res))
-          super.transform(tree)
-          //res
-
-          //trait DSLprog$ extends OptiML {def apply = body}
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
