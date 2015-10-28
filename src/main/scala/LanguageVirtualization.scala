@@ -1,6 +1,5 @@
 package org.scala_lang.virtualized
 
-import scala.collection.generic.MutableMapFactory
 import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
 import scala.collection.mutable
@@ -74,8 +73,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
       method(receiver.map(transform), nme, List(args.map(transform)), targs)
     }
 
-    var mapping = new mutable.HashMap[String, Any]()
-
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
         // sstucki: It seems necessary to keep the MUTABLE flag in the
@@ -134,9 +131,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           liftFeature(None, "infix_$plus", List(qual, arg))
 //        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
 //          liftFeature(None, "infix_$plus", List(qualifier, arg))
-
-//        case Apply(sym1 @ Ident(termName: TermName), List(arg)) => //sinbgle argument?
-//          ???
 
         case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
           liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
