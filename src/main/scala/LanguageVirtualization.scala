@@ -94,11 +94,14 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
          */
 
         case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), List(tnBlock)) =>
+          //TODO(trans): super.transform(tnBlock) ???
+          //TODO(trans): DSLprog numbering?
           val x = q"""{
-            trait DSLprog extends $tn1 {def apply = $tnBlock } //TODO(trans): super.transform(tnBlock) ???
+            trait DSLprog extends $tn1 {def apply = $tnBlock }
             //(new DSLprog with OptiMLExp): OptiML with OptiMLExp
-            val dsl = new DSLprog with $tn2 //: {tn1.asInstanceOf[TypeName]} with {tn2.asInstanceOf[TypeName]}
-            dsl.apply //just for testing purposes
+            //val dsl =
+            (new DSLprog with $tn2): $tn1 with $tn2
+            //dsl.apply //just for testing purposes
           }"""
           c.warning(tree.pos, s"CATCH THIS: newer case \n raw: "+showRaw(x)+"\n code: "+showCode(x))
           x

@@ -15,7 +15,7 @@ trait SourceContext extends SourceLocation {
   def bindings: List[(String, Int)]
 
   def assignedVariable: Option[String] =
-    if (bindings(0)._1 == null) None
+    if (bindings(0)._1 == null) None //TODO should this rather be "bindings == Nil"?
     else Some(bindings(0)._1)
 
   def methodName: String
@@ -40,7 +40,7 @@ object SourceContext {
   var debug = false
 
   // TODO: implementation missing, so temporary dummy source context for now
-  implicit val dummySourceContext: SourceContext = apply("dummy", Nil)
+  implicit val dummySourceContext: SourceContext = apply("dummy", ("SourceContext macro not implemented yet", 0) :: Nil)
 
   def apply(name: String, sourceInfo: List[(String, Int)]): SourceContext =
     apply("<unknown file>", name, sourceInfo)
