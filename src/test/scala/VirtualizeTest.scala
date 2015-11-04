@@ -1,6 +1,7 @@
 package org.scala_lang.virtualized
 package annotation
 
+import org.scala_lang.virtualized.SourceContext
 import org.scalatest.{ FlatSpec, ShouldMatchers }
 
 class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls {
@@ -15,6 +16,18 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
   def infix_==[T](x1: List[T], x2: List[T]): Boolean = {
     (x1 zip x2) forall (p => p._1 == p._2)
+  }
+
+  "virtualizeSourceContext" should "be virtualized" in {
+    implicit def conv(b:Boolean):OpsCls = OpsCls(b)
+    case class OpsCls(tis: Boolean){
+      def someOp(tat: Boolean)(implicit pos: SourceContext) = pos.toString
+    }
+
+    //@virtualize
+    def virtualizeContext()(implicit pos: SourceContext) = true.someOp(false)
+
+    virtualizeContext() should be("VirtualizeTest.scala:30:0") //Char offset not available?
   }
 
   "virtualizeIfTest" should "be virtualized" in {
