@@ -98,12 +98,9 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           //TODO(trans): DSLprog numbering?
           val x = q"""{
             trait DSLprog extends $tn1 {def apply = $tnBlock }
-            //(new DSLprog with OptiMLExp): OptiML with OptiMLExp
-            //val dsl =
             (new DSLprog with $tn2): $tn1 with $tn2
-            //dsl.apply //just for testing purposes
           }"""
-          c.warning(tree.pos, s"CATCH THIS: newer case \n raw: "+showRaw(x)+"\n code: "+showCode(x))
+          c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
           x
 
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>

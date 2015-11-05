@@ -27,7 +27,20 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     //@virtualize
     def virtualizeContext()(implicit pos: SourceContext) = true.someOp(false)
 
-    virtualizeContext() should be("VirtualizeTest.scala:30:0") //Char offset not available?
+    //Carefull, these tests depend on the line numbers they are writen on!!
+    //Char offset not available?
+    virtualizeContext() should be("VirtualizeTest.scala:32:0")
+  }
+
+  "virtualizeSourceContextNested" should "be virtualized" in {
+
+    def a()(implicit pos: SourceContext) = b()
+    def b()(implicit pos: SourceContext) = c()
+    def c()(implicit pos: SourceContext) = pos.toString()
+
+    //SourceContext macro should only be applied at the highest level
+    //Afterwards the implicit parameter should be passed down the forwarding calls
+    a() should be("VirtualizeTest.scala:43:0")
   }
 
   "virtualizeIfTest" should "be virtualized" in {
