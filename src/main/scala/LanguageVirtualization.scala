@@ -74,14 +74,13 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
     }
 
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
-      c.warning(tree.pos, "NOW IN TRANSFORM!")
       tree match {
         case ClassDef(mods, className: TypeName, tparams, impl@Template(parents, selfType, bodyList))
           if (className.decodedName.toString.startsWith("RTest") && mods.hasFlag(Flag.CASE)) =>
           val fields = bodyList.take(bodyList.size - 1)
           assert(fields.forall { case _: ValDef => true }) //all except the last parameter should be field definitions
           assert(bodyList.last match { case _: DefDef => true }) //the constructor
-          c.warning(tree.pos, "NOW IN HERE!")
+          c.warning(tree.pos, "NOW IN RECORD TRANSFORM!")
 
           //just a dummy set of variable declarations so we can test our implementation without actually calling the macro
           val dummyVars = fields.map{

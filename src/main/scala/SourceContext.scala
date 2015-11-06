@@ -10,8 +10,7 @@ import scala.language.experimental.macros
  */
 trait SourceContext extends SourceLocation {
 
-  var parent: Option[SourceContext] =
-    None
+  var parent: Option[SourceContext] = None
 
   def update(context: SourceContext): SourceContext
 
