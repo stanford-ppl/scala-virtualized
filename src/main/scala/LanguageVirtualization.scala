@@ -74,7 +74,95 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
     }
 
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
+      c.warning(tree.pos, "NOW IN TRANSFORM!")
       tree match {
+        case ClassDef(mods, className: TypeName, tparams, impl@Template(parents, selfType, bodyList))
+          if (className.decodedName.toString.startsWith("RTest") && mods.hasFlag(Flag.CASE)) =>
+          val fields = bodyList.take(bodyList.size - 1)
+          assert(fields.forall { case _: ValDef => true }) //all except the last parameter should be field definitions
+          assert(bodyList.last match { case _: DefDef => true }) //the constructor
+          c.warning(tree.pos, "NOW IN HERE!")
+
+          //just a dummy set of variable declarations so we can test our implementation without actually calling the macro
+          val dummyVars = fields.map{
+            case ValDef(_, termName, typeIdent, rhs) =>
+              val tn = TermName("r_"+termName)
+              ValDef(Modifiers(Flag.MUTABLE | Flag.DEFAULTINIT), tn, typeIdent, EmptyTree) //var c_r:C = _
+          }
+
+          val fieldList = fields.map{
+            case ValDef(_, termName, typeIdent, rhs) =>
+              val tn = TermName("r_"+termName)
+              q"val $tn: $typeIdent"
+          }
+          val atype = q"type $className = Record { ..$fieldList }"
+
+          val args = fields.map{
+            case ValDef(_, termName, typeIdent, rhs) =>
+              ValDef(Modifiers(Flag.PARAM), termName, AppliedTypeTree(Ident(TypeName("Rep")), List(typeIdent)), rhs)
+          }
+          val body = fields.map{
+            case ValDef(_, termName, typeIdent, rhs) =>
+              val tn = TermName("r_"+termName)
+              Assign(Ident(tn), Ident(termName))
+          }
+          //TODO: :Rep[$className]
+          val mdef = q"def ${className.toTermName}(..$args) = Record ( ..$body )"
+
+          val objectName = TermName("O_"+className)
+          val cc = q"object $objectName { ..$dummyVars ; $atype ; $mdef }"
+
+//        def ${className.toTermName}(
+//        ${
+//            fields.map {
+//              case ValDef(_, termName, typeIdent, rhs) => "" + termName + ": Rep[" + typeIdent + "]"
+//            }.mkString(", ")
+//          }
+//        )"""
+//        =
+//        Record (
+//        ${
+//            fields.map {
+//              case ValDef(_, termName, typeIdent, rhs) => "r_" + termName + " = " + termName
+//            }.mkString(", ")
+//          }
+//        )
+//            """
+          //        ClassDef(
+          //        modifiers,
+          //        className,
+          //        tparams,
+          //        impl @ Template(
+          //          parents,
+          //          selfType,
+          //          body @ List(
+          //            ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("i"), Ident(TypeName("Int")), EmptyTree),
+          //            ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("s"), Ident(TypeName("String")), EmptyTree),
+          //            constructor = DefDef(
+          //              Modifiers(),
+          //              termNames.CONSTRUCTOR,
+          //              List(),
+          //              List(
+          //                List(
+          //                  ValDef(Modifiers(PARAM | PARAMACCESSOR),
+          //                  TermName("i"),
+          //                  Ident(TypeName("Int")),
+          //                  EmptyTree),
+          //                  ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("s"), Ident(TypeName("String")), EmptyTree)
+          //                )
+          //              ),
+          //              TypeTree(),
+          //              Block(List(pendingSuperCall), Literal(Constant(())))
+          //            )
+          //          )
+          //        )
+          //      )
+          c.warning(tree.pos, showCode(cc))
+          c.warning(tree.pos, showRaw(cc))
+          println(showCode(cc))
+          //c.Expr(Block(expandees, Literal(Constant(()))))
+          cc//c.Expr(cc)
+
         // sstucki: It seems necessary to keep the MUTABLE flag in the
         // new ValDef set, otherwise it becomes tricky to
         // "un-virtualize" a variable definition, if necessary
