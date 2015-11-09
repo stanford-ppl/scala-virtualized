@@ -25,17 +25,17 @@ class RecordTest extends FlatSpec with ShouldMatchers with EmbeddedControls {
     @record
     case class RTest0()
 
-    @virtualize
+    @record
     case class RTest1()
     import O_RTest1._
     val o1 = RTest1()
-    println(o1.getClass)
+    println(o1.getClass())
 
-    @virtualize
+    @record
     case class RTest2(key: Int, name: String, comment: String)
     import O_RTest2._
     val o2 = RTest2(4, "Hello", "World")
-    println(o1.getClass)
+    println(o1.getClass())
 
 
   }
