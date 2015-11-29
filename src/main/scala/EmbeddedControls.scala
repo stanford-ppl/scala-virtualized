@@ -72,6 +72,8 @@ trait EmbeddedControls {
   def infix_wait(x: AnyRef, timeout: Long, nanos: Int): Unit = macro anyRef_wait2
   def infix_clone(x: AnyRef): AnyRef = macro anyRef_clone
   def infix_finalize(x: AnyRef): Unit = macro anyRef_finalize
+
+  class Scope[Interface, Implementation, Result](body: => Result) //dummy class to avoid some errors in the IDE
 }
 
 /**

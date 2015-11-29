@@ -76,26 +76,47 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
         /**
-         * given `def OptiML[R](b: => R) = new Scope[OptiML, OptiMLExp, R](b)`
-         *
-         * `OptiML { body }` is expanded to:
-         *
-         *  trait DSLprog$ extends OptiML {def apply = body}
-         *  (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
-         *
-         * OptiML    => List(Ident(TypeName("T")))
-         * OptiML[T] => AppliedTypeTree(Ident(TypeName("T")), List(Ident(TypeName("P"))))
-         */
-
-        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), List(tnBlock)) =>
-          //TODO(trans): super.transform(tnBlock) ???
-          //TODO(trans): DSLprog numbering?
+          * given:
+          * `def OptiML[R](b: => R) = new Scope[OptiML, OptiMLExp, R](b)`
+          *
+          * generate:
+          * `OptiML { body }` is expanded to:
+          *
+          * trait DSLprog$ extends OptiML {def apply = body}
+          * (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
+          *
+          * other use case: (with type parameters)
+          * new Scope[TpeScope, TpeScopeRunner[R], R](block)
+          * Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(id1, AppliedTypeTree(Ident(TypeName("TpeScopeRunner")), List(Ident(TypeName("R")))), id3))), termNames.CONSTRUCTOR), List(Ident(TermName("block"))))
+          *
+          */
+        case Apply(Apply(Ident(TermName("withTpee")), List(termName)), listBody) =>
           val x = q"""{
-            trait DSLprog extends $tn1 {def apply = $tnBlock }
-            (new DSLprog with $tn2): $tn1 with $tn2
+            _tpeScopeBox = $termName
+            (new TpeScopeRunner {def apply: Nothing = $listBody}).apply
+//            trait DSLprog extends TpeScope {def apply: R = listBody }
+//            val cl = (new DSLprog with TpeScopeRunner[R]): DSLprog with TpeScopeRunner[R]
+//            cl.apply
           }"""
           c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
           x
+
+        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), tnBlock :: xs) => //TODO: handle body with multiple statements
+          //TODO(trans): super.transform(tnBlock) ???
+          //TODO(trans): DSLprog numbering? - should be inside a block
+          val x = q"""{
+            trait DSLprog extends $tn1 {def apply = $tnBlock }
+            val cl = (new DSLprog with $tn2): $tn1 with $tn2
+            cl.apply
+          }"""
+          println(s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          x
+
+        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), _)), _), _) =>
+          println("Scope not transformed "+showRaw(tree))
+          c.error(tree.pos, "Scope not transformed "+showRaw(tree))
+          tree
 
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
