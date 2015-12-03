@@ -91,26 +91,44 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           *
           */
         case Apply(Apply(Ident(TermName("withTpee")), List(termName)), listBody) =>
-          val x = q"""{
+          val x = q"""new {
             _tpeScopeBox = $termName
-            (new TpeScopeRunner {def apply: Nothing = $listBody}).apply
-//            trait DSLprog extends TpeScope {def apply: R = listBody }
-//            val cl = (new DSLprog with TpeScopeRunner[R]): DSLprog with TpeScopeRunner[R]
-//            cl.apply
+
+            abstract class DSLprog extends TpeScope {
+              def apply = $listBody
+            }
+            class DSLrun extends DSLprog with TpeScopeRunner
+            val result = ((new DSLrun): TpeScope with TpeScopeRunner).apply
           }"""
-          c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          c.warning(tree.pos, s"SCOPE GENERATED for term: "+termName.toString)
+          if (termName.toString == "Vector")
+            println("RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          //FIXME: this will actually make the compiler crash!!! Too long string
+//        JUST DONT PRINT IT!  c.warning(tree.pos, s"SCOPE GENERATED2: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
           x
 
-        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), tnBlock :: xs) => //TODO: handle body with multiple statements
+        //case where we actually inject a macro
+
+        //TODO: handle body with multiple statements??
+        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), tnBlock :: xs) =>
           //TODO(trans): super.transform(tnBlock) ???
           //TODO(trans): DSLprog numbering? - should be inside a block
           val x = q"""{
+//            import language.experimental.macros
+//            import scala.reflect.macros.blackbox.Context
+//            def x = macro macrobj.impl
+//            object macrobj {
+//              def impl(c:Context)(expr: c.Expr[Any]) {
+//                import c.universe._
+//                c.Expr(q"")
+//              }
+//            }
             trait DSLprog extends $tn1 {def apply = $tnBlock }
             val cl = (new DSLprog with $tn2): $tn1 with $tn2
             cl.apply
           }"""
-          println(s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
-          c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          println(s"SCOPE GENERATED3: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          c.warning(tree.pos, s"SCOPE GENERATED4: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
           x
 
         case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), _)), _), _) =>
