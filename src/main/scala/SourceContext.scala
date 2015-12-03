@@ -12,6 +12,8 @@ trait SourceContext extends SourceLocation {
 
   var parent: Option[SourceContext] = None
 
+  def path: String //full path, fileName only contains Name
+
   def update(context: SourceContext): SourceContext
 
   def bindings: List[(String, Int)]
@@ -40,15 +42,25 @@ trait SourceContext extends SourceLocation {
 class SourceContextMacro(val c: Context) {
   import c.universe._
   def impl: c.Expr[SourceContext] = {
-    import c.universe._
-    val pos = c.enclosingPosition //pos.source.file.name, pos.source.getClass.getName
-    val filename = pos.source.file.name//e.g. /Users/cedricbastin/folders/03-uni/00-class/MA5-PPL/virtualization-lms-core/test-src/epfl/test1-arith/TestNumeric.scala
+    val pos:Position = c.enclosingPosition
+    val path = pos.source.path
+    val filename = pos.source.file.name
     val line = pos.line
-    val charOffset = pos.column
-    val methodName = "DontKnow" //pos.getClass.getMethods
-    //val receiver = Some(impli) //  implicit def impli(i:Int) = new OpsCls(i)
-    val bindings = List(("todo: sourceInfo",line)) //aka: sourceInfo
-    c.Expr( q"""SourceContext($filename, $methodName, $bindings)""")
+    //pos.point seems to be the overall character offset of all the characters in the file
+    val charOffset = mapExtra(pos.point)(new String(pos.source.file.toCharArray).split("\n").toList)//pos.column is always 0, pos.point has wrong values
+    val methodName = "no method name available" //c.enclosingMethod is empty...
+    //val receiver =
+    //TODO: what is bindings supposed to contain??
+    val bindings = List(("line",line),("column",charOffset)) //aka: sourceInfo
+    c.Expr( q"""SourceContext($path, $filename, $methodName, $bindings)""")
+  }
+
+  //calculate the offset in the corresponding line not the overall file!
+  def mapExtra(i: Int)(l:List[String]): Int = l match { //we already know the line so we can discard this information
+    case Nil => -1 //offset is out of the range of
+    case x :: xs =>
+      if (x.length >= i) i
+      else mapExtra(i-x.length-1)(xs) //"-1" for single line break character
   }
 }
 
@@ -59,24 +71,26 @@ object SourceContext {
   implicit def m: SourceContext = macro SourceContextMacro.impl
 
   def apply(name: String, sourceInfo: List[(String, Int)]): SourceContext =
-    apply("<unknown file>", name, sourceInfo)
+    apply("<unknown path>", "<unknown file>", name, sourceInfo)
 
-  def apply(fileName: String, name: String, sourceInfo: List[(String, Int)]): SourceContext =
-    new ConcreteSourceContext(fileName, name, sourceInfo)
+  def apply(path:String, fileName: String, name: String, sourceInfo: List[(String, Int)]): SourceContext =
+    new ConcreteSourceContext(path, fileName, name, sourceInfo)
 
-  def apply(fileName: String, name: String, receiver: String, sourceInfo: List[(String, Int)]): SourceContext =
-    new ConcreteSourceContext(fileName, name, Some(receiver), sourceInfo)
+  def apply(path:String, fileName: String, name: String, receiver: String, sourceInfo: List[(String, Int)]): SourceContext =
+    new ConcreteSourceContext(path, fileName, name, Some(receiver), sourceInfo)
 
-  private class ConcreteSourceContext(override val fileName: String,
+  private class ConcreteSourceContext(val path:String,
+                                      override val fileName: String,
                                       val methodName: String,
                                       val receiver: Option[String],
                                       val bindings: List[(String, Int)])
   extends SourceContext {
 
-    def this(file: String, method: String, bs: List[(String, Int)]) =
-      this(file, method, None, bs)
+    def this(path:String, file: String, method: String, bs: List[(String, Int)]) =
+      this(path, file, method, None, bs)
 
     def line = bindings(0)._2
+    override def charOffset = bindings(1)._2 //I don't know how to do this
 
     def update(context: SourceContext): SourceContext = {
       context.parent = Some(this)
