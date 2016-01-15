@@ -91,15 +91,17 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           *
           */
         case Apply(Apply(Ident(TermName("withTpee")), List(termName)), listBody) =>
-          val x = q"""new {
+          println("XXXX")
+          val objName = TermName(termName.toString()+"Object")
+          val x = q"""
             _tpeScopeBox = $termName
 
             abstract class DSLprog extends TpeScope {
               def apply = $listBody
             }
             class DSLrun extends DSLprog with TpeScopeRunner
-            val result = ((new DSLrun): TpeScope with TpeScopeRunner).apply
-          }"""
+            ((new DSLrun): TpeScope with TpeScopeRunner).result
+          """
           c.warning(tree.pos, s"SCOPE GENERATED for term: "+termName.toString)
           if (termName.toString == "Vector")
             println("RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
@@ -242,9 +244,9 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           // just treating case classes as regular classes works fine.
           //println(tree)
           c.warning(tree.pos, "virtualization of case classes is not fully supported.")
-          super.transform(tree) 
+          super.transform(tree) //this will just jump one step but still
         case _ =>
-          super.transform(tree)
+          super.transform(tree) //due to method dispatching this will fall back to this.tranform after 1 step
       }
     }
     def apply(tree: c.universe.Tree): (Tree, Seq[DSLFeature]) =
