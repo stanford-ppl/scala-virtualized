@@ -238,4 +238,32 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeInstanceOf("hello") should be("hello")
     virtualizeInstanceOf(Nil) should be(null)
   }
+
+  "Scopes" should "be generated" in {
+    case class MyCls(i:Int)
+    trait Ops {
+      def m(i:Int):MyCls
+      def apply: Any
+    }
+    trait OpsExp extends Ops{
+      def m(i:Int) = MyCls(i)
+//      def apply = ??? //(i:Int):MyCls = m(i)
+    }
+
+    //new scope needs to be inside an object for this to work!
+    //none should be needed!
+    @virtualize
+    class OptiQL {
+      def apply(b: Int) = {
+        new Scope[Ops, OpsExp, Int](m(b))
+        //new Scope[Ops, OpsExp, Int]{m(b)} //different version of scopes, more involved but less dangerous
+      }
+      def x = {
+        new OpsExp { def apply = 7} //other anonymous classes should not be deleted!
+      }
+    }
+
+
+    println(new OptiQL()(9))
+  }
 }

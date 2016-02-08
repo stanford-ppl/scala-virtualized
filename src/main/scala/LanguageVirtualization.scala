@@ -72,10 +72,13 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
       log(show(method(receiver.map(transform), nme, List(args.map(transform)), targs)), 3)
       method(receiver.map(transform), nme, List(args.map(transform)), targs)
     }
-
+    var scopeAnonClasses:List[TypeName] = Nil
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
         /**
+          * little Hack for Delite Scope object:
+          * inject specific Code for DSL to make it easier to use a DSL
+          *
           * given:
           * `def OptiML[R](b: => R) = new Scope[OptiML, OptiMLExp, R](b)`
           *
@@ -90,53 +93,53 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           * Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(id1, AppliedTypeTree(Ident(TypeName("TpeScopeRunner")), List(Ident(TypeName("R")))), id3))), termNames.CONSTRUCTOR), List(Ident(TermName("block"))))
           *
           */
-        case Apply(Apply(Ident(TermName("withTpee")), List(termName)), listBody) =>
-          println("XXXX")
+        case Apply(Apply(Ident(TermName("withTpee")), List(termName)), body) =>
           val objName = TermName(termName.toString()+"Object")
+          //TODO (macrotrans) val bodyTransform = transform(body)
           val x = q"""
             _tpeScopeBox = $termName
-
+            println("TPESCOPEBOX: "+$termName)
             abstract class DSLprog extends TpeScope {
-              def apply = $listBody
+              def apply = $body //Transform
             }
             class DSLrun extends DSLprog with TpeScopeRunner
             ((new DSLrun): TpeScope with TpeScopeRunner).result
           """
-          c.warning(tree.pos, s"SCOPE GENERATED for term: "+termName.toString)
-          if (termName.toString == "Vector")
-            println("RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
-          //FIXME: this will actually make the compiler crash!!! Too long string
-//        JUST DONT PRINT IT!  c.warning(tree.pos, s"SCOPE GENERATED2: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
+          println(s"WITHTPE SCOPE GENERATED for term: "+termName.toString)
+          c.warning(tree.pos, s"WITHTPE SCOPE GENERATED for term: "+termName.toString)
           x
 
-        //case where we actually inject a macro
-
-        //TODO: handle body with multiple statements??
-        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), tnBlock :: xs) =>
-          //TODO(trans): super.transform(tnBlock) ???
-          //TODO(trans): DSLprog numbering? - should be inside a block
-          val x = q"""{
-//            import language.experimental.macros
-//            import scala.reflect.macros.blackbox.Context
-//            def x = macro macrobj.impl
-//            object macrobj {
-//              def impl(c:Context)(expr: c.Expr[Any]) {
-//                import c.universe._
-//                c.Expr(q"")
-//              }
-//            }
-            trait DSLprog extends $tn1 {def apply = $tnBlock }
+        //FIXME(macrotrans) is the simple scope actually needed?
+        //this only works for: `new Scope[A, B, C]()`
+        //bew case needed for: `new Scope[A, B, C]{}` => creates anonymous class and stuff
+        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), List(body)) =>
+          //TODO(trans): val bodyTranform = transform(body)
+          val ret = q"""{
+            trait DSLprog extends $tn1 {def apply = $body }
             val cl = (new DSLprog with $tn2): $tn1 with $tn2
             cl.apply
           }"""
-          println(s"SCOPE GENERATED3: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
-          c.warning(tree.pos, s"SCOPE GENERATED4: \n RAW: "+showRaw(x)+"\n CODE: "+showCode(x))
-          x
+          println(s"SCOPE GENERATED3: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
+          c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
+          ret
 
-        case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), _)), _), _) =>
-          println("Scope not transformed "+showRaw(tree))
-          c.error(tree.pos, "Scope not transformed "+showRaw(tree))
-          tree
+//        //this does not work without the the next case which filters out unused instantiations of anonymous classes
+//        case ClassDef(modifs, anonName, List(), Template(List(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tn3))), _, DefDef(_, termNames.CONSTRUCTOR, _, _, _, _) :: bodyList)) =>
+//          scopeAnonClasses = anonName :: scopeAnonClasses //add new classname to filter out
+//          //TODO(macrovirt) transform body?
+//          val ret = q"""
+//            trait DSLprog extends $tn1 {def apply = $bodyList }
+//            val cl = (new DSLprog with $tn2): $tn1 with $tn2
+//            cl.apply
+//            """
+//          println(s"NEW SCOPE GENERATED3: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
+//          c.warning(tree.pos, s"NEW SCOPE GENERATED: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
+//          ret
+//
+//        case Apply(Select(New(Ident(termName)), _), args) if scopeAnonClasses.contains(termName) =>
+//          //FIXME(macrotrans) this is dangerous! We have to be sure that the transformer uses unique names for each anonymous class an not only depending on context as the mutable state carries over
+//          println("removed class: "+termName)
+//          q"{}" //remove this instantiations
 
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
@@ -164,8 +167,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         // TODO: note that this is not sufficient to handle "foo: " + x + "," + y
         case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
           liftFeature(None, "infix_$plus", List(qual, arg))
-//        case Apply(Select(qualifier, TermName("$plus")), List(arg)) =>
-//          liftFeature(None, "infix_$plus", List(qualifier, arg))
 
         case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
           liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
@@ -244,9 +245,9 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           // just treating case classes as regular classes works fine.
           //println(tree)
           c.warning(tree.pos, "virtualization of case classes is not fully supported.")
-          super.transform(tree) //this will just jump one step but still
+          super.transform(tree) //don't virtualize the case class definition but virtualize its body
         case _ =>
-          super.transform(tree) //due to method dispatching this will fall back to this.tranform after 1 step
+          super.transform(tree)
       }
     }
     def apply(tree: c.universe.Tree): (Tree, Seq[DSLFeature]) =

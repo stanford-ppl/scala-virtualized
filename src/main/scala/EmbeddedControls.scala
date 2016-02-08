@@ -72,8 +72,6 @@ trait EmbeddedControls {
   def infix_wait(x: AnyRef, timeout: Long, nanos: Int): Unit = macro anyRef_wait2
   def infix_clone(x: AnyRef): AnyRef = macro anyRef_clone
   def infix_finalize(x: AnyRef): Unit = macro anyRef_finalize
-
-  class Scope[Interface, Implementation, Result](body: => Result) //dummy class to avoid some errors in the IDE
 }
 
 /**
@@ -81,7 +79,6 @@ trait EmbeddedControls {
  */
 private object EmbeddedControls {
 
-  //
   // Control structures
 
   def ifThenElseImpl[T](c: Context)(
@@ -120,7 +117,6 @@ private object EmbeddedControls {
 
   def newVarImpl[T](c: Context)(init: c.Expr[T]): c.Expr[T] = init
 
-  //
   // Poor man's infix methods for `Any` methods
 
   def string_+(c: Context)(
@@ -197,7 +193,6 @@ private object EmbeddedControls {
     c.Expr(q"$x.getClass()")
   }
 
-  //
   // Poor man's infix methods for `AnyRef` methods
 
   def anyRef_eq(c: Context)(
