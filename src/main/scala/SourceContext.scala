@@ -68,7 +68,7 @@ object SourceContext {
 
   var debug = false
 
-  implicit def m: SourceContext = macro SourceContextMacro.impl
+  implicit def _sc: SourceContext = macro SourceContextMacro.impl
 
   def apply(name: String, sourceInfo: List[(String, Int)]): SourceContext =
     apply("<unknown path>", "<unknown file>", name, sourceInfo)

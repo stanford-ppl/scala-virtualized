@@ -67,10 +67,10 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
   private class VirtualizationTransformer extends Transformer {
     val lifted = mutable.ArrayBuffer[DSLFeature]()
 
-    def liftFeature(receiver: Option[Tree], nme: String, args: List[Tree], targs: List[Tree] = Nil): Tree = {
+    def liftFeature(receiver: Option[Tree], nme: String, args: List[Tree], targs: List[Tree] = Nil, trans: Tree => Tree = transform): Tree = {
       lifted += DSLFeature(receiver.map(_.tpe), nme, targs, List(args.map(_.tpe)))
-      log(show(method(receiver.map(transform), nme, List(args.map(transform)), targs)), 3)
-      method(receiver.map(transform), nme, List(args.map(transform)), targs)
+      log(show(method(receiver.map(trans), nme, List(args.map(trans)), targs)), 3)
+      method(receiver.map(trans), nme, List(args.map(trans)), targs)
     }
     var scopeAnonClasses:List[TypeName] = Nil
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
@@ -144,7 +144,12 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
-        // TODO: what about variable reads?
+        // TODO: what about variable reads? TODO(macrovirt) what is special about them?
+        case Ident(x) if tree.symbol.isTerm && tree.symbol.asTerm.isVar =>
+          liftFeature(None, "__readVar", List(tree), Nil, x => x) //use ident transform on variables?
+
+          //yy:   def liftFeature(receiver: Option[Tree], nme: String, args: List[Tree], targs: List[Tree] = Nil, trans: Tree => Tree = transform)
+          //here: def liftFeature(receiver: Option[Tree], nme: String, args: List[Tree], targs: List[Tree] = Nil): Tree = {
 
         case t @ If(cond, thenBr, elseBr) =>
           liftFeature(None, "__ifThenElse", List(cond, thenBr, elseBr))
@@ -165,6 +170,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         // only rewrite + to infix_+ if lhs is a String *literal* (we can't look at types!)
         // TODO: note that this is not sufficient to handle "foo: " + x + "," + y
+        //macrovirt => do the other cases with implicit classes
+        //except maybe: "a" + "b" + unit(6) ...
         case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
           liftFeature(None, "infix_$plus", List(qual, arg))
 
