@@ -47,7 +47,7 @@ trait EmbeddedControls {
   def __whileDo(cond: Boolean, body: Unit): Unit = macro whileDoImpl
   def __doWhile(body: Unit, cond: Boolean): Unit = macro doWhileImpl
   def __newVar[T](init: T): T = macro newVarImpl[T]
-  def __readVar[T](init: T): T = macro readVarImpl[T]
+  def __readVar[T](init: T): T = macro readVarImpl[T] //different than LMS var!
 //  def __lazyValDef[T](init: T): T = macro lazyValDefImpl[T]
 //  def __valDef[T](init: T): T = macro valDefImpl[T]
 
@@ -87,7 +87,6 @@ private object EmbeddedControls {
 
   def ifThenElseImpl[T](c: Context)(
     cond: c.Expr[Boolean], thenBr: c.Expr[T], elseBr: c.Expr[T]): c.Expr[T] = {
-
     import c.universe._
     c.Expr(q"if ($cond) $thenBr else $elseBr")
   }

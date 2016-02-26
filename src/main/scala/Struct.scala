@@ -1,4 +1,4 @@
 package org.scala_lang.virtualized
 
-// TODO
+// was used as a marker trait in scala-virtualized
 trait Struct

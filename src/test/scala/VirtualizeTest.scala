@@ -43,6 +43,28 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     a() should be("VirtualizeTest.scala:43:5")
   }
 
+  def infix_+(x1: String, x2: Boolean): String = "trans"
+
+  "StringConcat" should "be virtualized" in {
+
+    @virtualize
+    def virtualizeIfTest() = "wefjbh" + true + "" + 6
+
+    virtualizeIfTest() should be("trans6")
+  }
+
+  "StringCaseClassConcat" should "be virtualized" in {
+
+    @virtualize
+    def m = {
+      case class C(i:Int) {def x = "wefjbh" + true}
+      C(6).x
+    }
+    def virtualizeIfTest() = m
+
+    virtualizeIfTest() should be("trans")
+  }
+
   "virtualizeIfTest" should "be virtualized" in {
 
     @virtualize
@@ -240,13 +262,13 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   "Scopes" should "be generated" in {
-    case class MyCls(i:Int)
+    case class MyCls[T](i:T)
     trait Ops {
-      def m(i:Int):MyCls
+      def m(i:Int):MyCls[Int]
       def apply: Any
     }
-    trait OpsExp extends Ops{
-      def m(i:Int) = MyCls(i)
+    trait OpsExp[R] extends Ops{
+      def m(i:R) = MyCls(i)
 //      def apply = ??? //(i:Int):MyCls = m(i)
     }
 
@@ -254,16 +276,12 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     //none should be needed!
     @virtualize
     class OptiQL {
-      def apply(b: Int) = {
-        new Scope[Ops, OpsExp, Int](m(b))
-        //new Scope[Ops, OpsExp, Int]{m(b)} //different version of scopes, more involved but less dangerous
+      def MyDSL[R](b: => R) = new Scope[Ops, OpsExp[Int], Int](b)
+      val result = MyDSL {
+        println("hello")
+        m(5).i
       }
-      def x = {
-        new OpsExp { def apply = 7} //other anonymous classes should not be deleted!
-      }
+      result should be (5)
     }
-
-
-    println(new OptiQL()(9))
   }
 }

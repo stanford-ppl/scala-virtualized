@@ -72,46 +72,71 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
       log(show(method(receiver.map(trans), nme, List(args.map(trans)), targs)), 3)
       method(receiver.map(trans), nme, List(args.map(trans)), targs)
     }
-    var scopeAnonClasses:List[TypeName] = Nil
+
+    // this is used for scopes:
+    // def OptiQL[R](b: => R) = new Scope[OptiQLLower, OptiQLLowerRunner[R], R](b)
+    // syntax has to correspond exactly!
+    // this map collects dsls at definition site so it can access them at call site
+    // TODO: this is not a safe feature which should rather be removed as it is not longer used in Delite
+    val dslScopes:scala.collection.mutable.HashMap[String, (Tree, Tree, Tree)] = new scala.collection.mutable.HashMap()
+    
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
-        /**
-          * little Hack for Delite Scope object:
-          * inject specific Code for DSL to make it easier to use a DSL
-          *
-          * given:
-          * `def OptiML[R](b: => R) = new Scope[OptiML, OptiMLExp, R](b)`
-          *
-          * generate:
-          * `OptiML { body }` is expanded to:
-          *
-          * trait DSLprog$ extends OptiML {def apply = body}
-          * (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
-          *
-          * other use case: (with type parameters)
-          * new Scope[TpeScope, TpeScopeRunner[R], R](block)
-          * Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(id1, AppliedTypeTree(Ident(TypeName("TpeScopeRunner")), List(Ident(TypeName("R")))), id3))), termNames.CONSTRUCTOR), List(Ident(TermName("block"))))
-          *
-          */
+        // this is a helper `method` for DSL generation in Forge
+        // It avoid some boilerplate code but it not that principled:
+        // USAGE:
+        // magic() //have to make an explicit call to 'execute' side effects
+        // @virtualize //values could not be annotated...
+        // def magic[R]() = withTpee(Community){ //rhs pattern is matched by virtualized
+
         case Apply(Apply(Ident(TermName("withTpee")), List(termName)), body) =>
           val objName = TermName(termName.toString()+"Object")
           //TODO (macrotrans) val bodyTransform = transform(body)
           val x = q"""
             _tpeScopeBox = $termName
-            println("TPESCOPEBOX: "+$termName)
             abstract class DSLprog extends TpeScope {
               def apply = $body //Transform
             }
             class DSLrun extends DSLprog with TpeScopeRunner
             ((new DSLrun): TpeScope with TpeScopeRunner).result
           """
-          println(s"WITHTPE SCOPE GENERATED for term: "+termName.toString)
           c.warning(tree.pos, s"WITHTPE SCOPE GENERATED for term: "+termName.toString)
           x
 
-        //FIXME(macrotrans) is the simple scope actually needed?
-        //this only works for: `new Scope[A, B, C]()`
-        //bew case needed for: `new Scope[A, B, C]{}` => creates anonymous class and stuff
+        /**
+        * little Hack for Delite Scope object:
+        * inject specific Code for DSL to make it easier to use a DSL
+        *
+        * given:
+        * `def OptiML[R](b: => R) = new Scope[OptiML, OptiMLExp, R](b)`
+        *
+        * generate:
+        * `OptiML { body }` is expanded to:
+        *
+        * trait DSLprog$ extends OptiML {def apply = body}
+        * (new DSLprog$ with OptiMLExp): OptiML with OptiMLExp
+        *
+        * other use case: (with type parameters)
+        * new Scope[TpeScope, TpeScopeRunner[R], R](block)
+        * Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(id1, AppliedTypeTree(Ident(TypeName("TpeScopeRunner")), List(Ident(TypeName("R")))), id3))), termNames.CONSTRUCTOR), List(Ident(TermName("block"))))
+        *
+        */
+        //def apply[R](b: => R) = new Scope[OptiWranglerLower, OptiWranglerLowerRunner[R], R](b)")
+        //DefDef(Modifiers(), TermName("apply"), List(TypeDef(Modifiers(PARAM), TypeName("R"), List(), TypeBoundsTree(EmptyTree, EmptyTree))), List(List(ValDef(Modifiers(PARAM | BYNAMEPARAM/CAPTURED/COVARIANT), TermName("b"), AppliedTypeTree(Select(Select(Ident(termNames.ROOTPKG), TermName("scala")), TypeName("<byname>")), List(Ident(TypeName("R")))), EmptyTree))), TypeTree(), Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(Ident(TypeName("OptiWranglerLower")), AppliedTypeTree(Ident(TypeName("OptiWranglerLowerRunner")), List(Ident(TypeName("R")))), Ident(TypeName("R"))))), termNames.CONSTRUCTOR), List(Ident(TermName("b")))))
+        case DefDef(_, dslName, _, _, _, Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(identDSL, AppliedTypeTree(identDSLRunner, _), typeParam))), _), _)) =>
+          dslScopes += Tuple2(dslName.toString, (identDSL, identDSLRunner, typeParam))
+          q""
+
+        case Apply(identTermName, List(body)) if dslScopes.contains(identTermName.toString) =>
+          val (dsl, runner, typ) = dslScopes(identTermName.toString())
+          val ret = q"""{
+            trait DSLprog extends $dsl {def apply:$typ = $body }
+            val cl = (new DSLprog with $runner[$typ]): $dsl with $runner[$typ]
+            cl.apply
+          }"""
+          ret
+
+        // this only works for: `new Scope[A, B, C]()` not for: `new Scope[A, B, C]{}` => creates anonymous class and stuff
         case Apply(Select(New(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tnR))), termnames), List(body)) =>
           //TODO(trans): val bodyTranform = transform(body)
           val ret = q"""{
@@ -119,27 +144,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
             val cl = (new DSLprog with $tn2): $tn1 with $tn2
             cl.apply
           }"""
-          println(s"SCOPE GENERATED3: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
           c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
           ret
-
-//        //this does not work without the the next case which filters out unused instantiations of anonymous classes
-//        case ClassDef(modifs, anonName, List(), Template(List(AppliedTypeTree(Ident(TypeName("Scope")), List(tn1, tn2, tn3))), _, DefDef(_, termNames.CONSTRUCTOR, _, _, _, _) :: bodyList)) =>
-//          scopeAnonClasses = anonName :: scopeAnonClasses //add new classname to filter out
-//          //TODO(macrovirt) transform body?
-//          val ret = q"""
-//            trait DSLprog extends $tn1 {def apply = $bodyList }
-//            val cl = (new DSLprog with $tn2): $tn1 with $tn2
-//            cl.apply
-//            """
-//          println(s"NEW SCOPE GENERATED3: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
-//          c.warning(tree.pos, s"NEW SCOPE GENERATED: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
-//          ret
-//
-//        case Apply(Select(New(Ident(termName)), _), args) if scopeAnonClasses.contains(termName) =>
-//          //FIXME(macrotrans) this is dangerous! We have to be sure that the transformer uses unique names for each anonymous class an not only depending on context as the mutable state carries over
-//          println("removed class: "+termName)
-//          q"{}" //remove this instantiations
 
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
@@ -147,9 +153,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         // TODO: what about variable reads? TODO(macrovirt) what is special about them?
         case Ident(x) if tree.symbol.isTerm && tree.symbol.asTerm.isVar =>
           liftFeature(None, "__readVar", List(tree), Nil, x => x) //use ident transform on variables?
-
-          //yy:   def liftFeature(receiver: Option[Tree], nme: String, args: List[Tree], targs: List[Tree] = Nil, trans: Tree => Tree = transform)
-          //here: def liftFeature(receiver: Option[Tree], nme: String, args: List[Tree], targs: List[Tree] = Nil): Tree = {
 
         case t @ If(cond, thenBr, elseBr) =>
           liftFeature(None, "__ifThenElse", List(cond, thenBr, elseBr))
@@ -168,10 +171,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           List()), Literal(Constant(()))))) if label == sym => // do while(){}
           liftFeature(None, "__doWhile", List(cond, body))
 
-        // only rewrite + to infix_+ if lhs is a String *literal* (we can't look at types!)
-        // TODO: note that this is not sufficient to handle "foo: " + x + "," + y
-        //macrovirt => do the other cases with implicit classes
-        //except maybe: "a" + "b" + unit(6) ...
+        // only virtualize `+` to `infix_+` if lhs is a String *literal* (we can't look at types!)
+        // NOFIX: this pattern does not work for: `string + unstaged + staged`
         case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
           liftFeature(None, "infix_$plus", List(qual, arg))
 
@@ -250,7 +251,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           // auto-generated case class equality methods using virtualized
           // equality where it shouldn't). For the moment it seems like 
           // just treating case classes as regular classes works fine.
-          //println(tree)
           c.warning(tree.pos, "virtualization of case classes is not fully supported.")
           super.transform(tree) //don't virtualize the case class definition but virtualize its body
         case _ =>
@@ -260,5 +260,4 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
     def apply(tree: c.universe.Tree): (Tree, Seq[DSLFeature]) =
       (transform(tree), lifted.toSeq)
   }
-
 }
