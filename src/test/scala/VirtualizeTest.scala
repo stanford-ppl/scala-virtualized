@@ -284,4 +284,13 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
       result should be (5)
     }
   }
+
+  // "withTpe" should "crash in this case" in {
+  //   //have to make an explicit call to 'execute' side effects
+  //    //values could not be annotated...
+  //   @virtualize
+  //   {
+  //     val magic = withTpee(Community){ println("with state") }
+  //   }
+  // }
 }
