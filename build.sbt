@@ -8,6 +8,8 @@ scalaVersion := "2.11.2"
 
 val paradiseVersion = "2.0.1"
 
+isSnapshot := true //allows to overwrites old local published version
+
 crossScalaVersions := Seq("2.10.2", "2.10.3", "2.10.4", "2.11.0", "2.11.1")
 
 resolvers += Resolver.sonatypeRepo("snapshots")
