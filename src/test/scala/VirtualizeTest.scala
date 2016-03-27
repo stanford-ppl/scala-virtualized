@@ -29,7 +29,7 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
     //Carefull, these tests depend on the line numbers they are writen on!!
     //Char offset not available?
-    virtualizeContext() should be("VirtualizeTest.scala:32:21")
+    virtualizeContext() should be("VirtualizeTest.scala:32:22")
   }
 
   "virtualizeSourceContextNested" should "be virtualized" in {
@@ -40,7 +40,7 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
     //SourceContext macro should only be applied at the highest level
     //Afterwards the implicit parameter should be passed down the forwarding calls
-    a() should be("VirtualizeTest.scala:43:5")
+    a() should be("VirtualizeTest.scala:43:6")
   }
 
   def infix_+(x1: String, x2: Boolean): String = "trans"

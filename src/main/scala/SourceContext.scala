@@ -47,11 +47,12 @@ class SourceContextMacro(val c: Context) {
     val filename = pos.source.file.name
     val line = pos.line
     //pos.point seems to be the overall character offset of all the characters in the file
-    val charOffset = mapExtra(pos.point)(new String(pos.source.file.toCharArray).split("\n").toList)//pos.column is always 0, pos.point has wrong values
+    val column = pos.column
+//    val charOffset = mapExtra(pos.point)(new String(pos.source.file.toCharArray).split("\n").toList)//pos.column is always 0, pos.point has wrong values
     val methodName = "no method name available" //c.enclosingMethod is empty...
     //val receiver =
     //TODO: what is bindings supposed to contain??
-    val bindings = List(("line",line),("column",charOffset)) //aka: sourceInfo
+    val bindings = List(("line",line),("column",column)) //aka: sourceInfo
     c.Expr( q"""SourceContext($path, $filename, $methodName, $bindings)""")
   }
 
