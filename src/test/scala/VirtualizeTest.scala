@@ -19,28 +19,25 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   "virtualizeSourceContext" should "be virtualized" in {
-    implicit def conv(b:Boolean):OpsCls = OpsCls(b)
-    case class OpsCls(tis: Boolean){
-      def someOp(tat: Boolean)(implicit pos: SourceContext) = pos.toString
+    implicit class OpsCls(lhs: Boolean){
+      def op(rhs: Boolean)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName
     }
 
-    //@virtualize
-    def virtualizeContext()(implicit pos: SourceContext) = true.someOp(false)
+    def virtualizeContext()(implicit pos: SourceContext) = true op false
 
-    //Carefull, these tests depend on the line numbers they are writen on!!
-    //Char offset not available?
-    virtualizeContext() should be("VirtualizeTest.scala:32:22")
+    //Careful, these tests depend on the line numbers they are written on!!
+    virtualizeContext() should be("VirtualizeTest.scala:29:22 <local VirtualizeSpec>")
   }
 
   "virtualizeSourceContextNested" should "be virtualized" in {
 
     def a()(implicit pos: SourceContext) = b()
     def b()(implicit pos: SourceContext) = c()
-    def c()(implicit pos: SourceContext) = pos.toString()
+    def c()(implicit pos: SourceContext) = pos.toString + " " + pos.methodName
 
     //SourceContext macro should only be applied at the highest level
     //Afterwards the implicit parameter should be passed down the forwarding calls
-    a() should be("VirtualizeTest.scala:43:6")
+    a() should be("VirtualizeTest.scala:40:6 <local VirtualizeSpec>")
   }
 
   def infix_+(x1: String, x2: Boolean): String = "trans"
