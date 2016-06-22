@@ -28,18 +28,21 @@ import scala.collection.mutable
  *   t.asInstanceOf[T]      =>       infix_asInstanceOf[T](t)
  *   t.isInstanceOf[T]      =>       infix_isInstanceOf[T](t)
  *   t.toString             =>       infix_toString(t)
+ *   t.getClass             =>       infix_getClass(t)
  * }}}
  *
  * ===Poor man's infix methods for `AnyRef` methods===
  * {{{
  *   t eq t1                =>       infix_eq(t, t1)
  *   t ne t1                =>       infix_ne(t, t1)
+ *   t.clone                =>       infix_clone(t)
  *   t.notify               =>       infix_notify(t)
  *   t.notifyAll            =>       infix_notifyAll(t)
  *   t.synchronized[T](t1)  =>       infix_synchronized(t, t1)
  *   t.wait                 =>       infix_wait(t)
  *   t.wait(l)              =>       infix_wait(t, l)
  *   t.wait(t1, l)          =>       infix_wait(t, t1, l)
+ *   t.finalize()           =>       infix_finalize(t)
  * }}}
  *
  * @todo
@@ -82,6 +85,166 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
     
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
+
+        /* Variables */
+
+        case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
+          ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
+
+        // FIXME: this is not trapping any variable reads
+        // FIXME: need to make sure we don't inject a readVar into lhs of Assign
+        // case Ident(x) if tree.symbol.isTerm && tree.symbol.asTerm.isVar =>
+        //   liftFeature(None, "__readVar", List(tree), Nil, x => x) //use ident transform on variables?
+
+        /* Control structures (keywords) */
+
+        case t @ If(cond, thenBr, elseBr) =>
+          liftFeature(None, "__ifThenElse", List(cond, thenBr, elseBr))
+
+        case Return(e) =>
+          liftFeature(None, "__return", List(e))
+
+        case Assign(lhs, rhs) =>
+          liftFeature(None, "__assign", List(lhs, rhs))
+
+        case LabelDef(sym, List(), If(cond, Block(body :: Nil, Apply(Ident(label),
+          List())), Literal(Constant(())))) if label == sym => // while(){}
+          liftFeature(None, "__whileDo", List(cond, body))
+
+        case LabelDef(sym, List(), Block(body :: Nil, If(cond, Apply(Ident(label),
+          List()), Literal(Constant(()))))) if label == sym => // do while(){}
+          liftFeature(None, "__doWhile", List(cond, body))
+
+        case Try(block, catches, finalizer) => {
+          c.warning(tree.pos, "virtualization of try/catch expressions is not supported.")
+          super.transform(tree)
+        }
+
+        case Throw(expr) => {
+          c.warning(tree.pos, "virtualization of throw expressions is not supported.")
+          super.transform(tree)
+        }
+
+        /* Special case + for String literals */
+
+        // only virtualize `+` to `infix_+` if lhs is a String *literal* (we can't look at types!)
+        // NOFIX: this pattern does not work for: `string + unstaged + staged`
+        case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
+          liftFeature(None, "infix_$plus", List(qual, arg))
+
+        /* Methods defined on Any/AnyRef with arguments */ 
+
+        case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
+          liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
+
+        case Apply(Select(qualifier, TermName("$bang$eq")), List(arg)) =>
+          liftFeature(None, "infix_$bang$eq", List(qualifier, arg))
+
+        case Apply(Select(qualifier, TermName("equals")), List(arg)) =>
+          liftFeature(None, "infix_equals", List(qualifier, arg))
+
+        case Apply(Select(qualifier, TermName("eq")), List(arg)) =>
+          liftFeature(None, "infix_eq", List(qualifier, arg))
+
+        case Apply(Select(qualifier, TermName("ne")), List(arg)) =>
+          liftFeature(None, "infix_ne", List(qualifier, arg))
+
+        case Apply(Select(qualifier, TermName("wait")), List(arg)) =>
+          liftFeature(None, "infix_wait", List(qualifier, arg))
+
+        case Apply(Select(qualifier, TermName("wait")), List(arg0, arg1)) =>
+          liftFeature(None, "infix_wait", List(qualifier, arg0, arg1))
+
+        case Apply(Select(qualifier, TermName("synchronized")), List(arg)) =>
+          liftFeature(None, "infix_synchronized", List(qualifier, arg))
+
+        case Apply(TypeApply(Select(qualifier, TermName("synchronized")), targs), List(arg)) =>
+          liftFeature(None, "infix_synchronized", List(qualifier, arg), targs)
+
+        case TypeApply(Select(qualifier, TermName("asInstanceOf")), targs) =>
+          liftFeature(None, "infix_asInstanceOf", List(qualifier), targs)
+
+        case TypeApply(Select(qualifier, TermName("isInstanceOf")), targs) =>
+          liftFeature(None, "infix_isInstanceOf", List(qualifier), targs)
+
+        /* Methods defined on Any/AnyRef without arguments */
+
+        // For 0-arg methods we get a different tree depending on if the user writes empty parens 'x.clone()' or no parens 'x.clone' 
+        // We always match on the empty parens version first
+
+        case Apply(Select(qualifier, TermName("toString")), List()) =>
+          liftFeature(None, "infix_toString", List(qualifier))
+
+        case Select(qualifier, TermName("toString")) =>
+          liftFeature(None, "infix_toString", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("$hash$hash")), List()) =>
+          liftFeature(None, "infix_$hash$hash", List(qualifier))
+
+        case Select(qualifier, TermName("$hash$hash")) =>
+          liftFeature(None, "infix_$hash$hash", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("hashCode")), List()) =>
+          liftFeature(None, "infix_hashCode", List(qualifier))
+
+        case Select(qualifier, TermName("hashCode")) =>
+          liftFeature(None, "infix_hashCode", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("clone")), List()) =>
+          liftFeature(None, "infix_clone", List(qualifier))
+
+        case Select(qualifier, TermName("clone")) =>
+          liftFeature(None, "infix_clone", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("notify")), List()) =>
+          liftFeature(None, "infix_notify", List(qualifier))
+
+        case Select(qualifier, TermName("notify")) =>
+          liftFeature(None, "infix_notify", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("notifyAll")), List()) =>
+          liftFeature(None, "infix_notifyAll", List(qualifier))
+
+        case Select(qualifier, TermName("notifyAll")) =>
+          liftFeature(None, "infix_notifyAll", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("wait")), List()) =>
+          liftFeature(None, "infix_wait", List(qualifier))
+
+        case Select(qualifier, TermName("wait")) =>
+          liftFeature(None, "infix_wait", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("finalize")), List()) =>
+          liftFeature(None, "infix_finalize", List(qualifier))
+
+        case Select(qualifier, TermName("finalize")) =>
+          liftFeature(None, "infix_finalize", List(qualifier))
+
+        case Apply(Select(qualifier, TermName("getClass")), List()) =>
+          liftFeature(None, "infix_getClass", List(qualifier))
+
+        case Select(qualifier, TermName("getClass")) =>
+          liftFeature(None, "infix_getClass", List(qualifier))
+
+        /* Unsupported */
+
+        case ClassDef(mods, n, _, _) if mods.hasFlag(Flag.CASE) =>
+          // sstucki: there are issues with the ordering of
+          // virtualization and expansion of case classes (i.e. some
+          // of the expanded code might be virtualized even though it
+          // should not be and vice-versa).  So until we have decided
+          // how proper virtualization of case classes should be done,
+          // any attempt to do so should fail.
+          // TR: not 100% sure what the issue is (although i vaguely
+          // remember that we had issues in Scala-Virtualized with 
+          // auto-generated case class equality methods using virtualized
+          // equality where it shouldn't). For the moment it seems like 
+          // just treating case classes as regular classes works fine.
+          c.warning(tree.pos, "virtualization of case classes is not fully supported.")
+          super.transform(tree) //don't virtualize the case class definition but virtualize its body
+        
+        /* Scopes */
+
         // this is a helper `method` for DSL generation in Forge
         // It avoid some boilerplate code but it not that principled:
         // USAGE:
@@ -147,112 +310,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
           ret
 
-        case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
-          ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
-
-        // TODO: what about variable reads? TODO(macrovirt) what is special about them?
-        case Ident(x) if tree.symbol.isTerm && tree.symbol.asTerm.isVar =>
-          liftFeature(None, "__readVar", List(tree), Nil, x => x) //use ident transform on variables?
-
-        case t @ If(cond, thenBr, elseBr) =>
-          liftFeature(None, "__ifThenElse", List(cond, thenBr, elseBr))
-
-        case Return(e) =>
-          liftFeature(None, "__return", List(e))
-
-        case Assign(lhs, rhs) =>
-          liftFeature(None, "__assign", List(lhs, rhs))
-
-        case LabelDef(sym, List(), If(cond, Block(body :: Nil, Apply(Ident(label),
-          List())), Literal(Constant(())))) if label == sym => // while(){}
-          liftFeature(None, "__whileDo", List(cond, body))
-
-        case LabelDef(sym, List(), Block(body :: Nil, If(cond, Apply(Ident(label),
-          List()), Literal(Constant(()))))) if label == sym => // do while(){}
-          liftFeature(None, "__doWhile", List(cond, body))
-
-        // only virtualize `+` to `infix_+` if lhs is a String *literal* (we can't look at types!)
-        // NOFIX: this pattern does not work for: `string + unstaged + staged`
-        case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
-          liftFeature(None, "infix_$plus", List(qual, arg))
-
-        case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
-          liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
-
-        case Apply(Select(qualifier, TermName("$bang$eq")), List(arg)) =>
-          liftFeature(None, "infix_$bang$eq", List(qualifier, arg))
-
-        case Apply(lhs @ Select(qualifier, TermName("$hash$hash")), List()) =>
-          liftFeature(None, "infix_$hash$hash", List(qualifier))
-
-        case Apply(lhs @ Select(qualifier, TermName("equals")), List(arg)) =>
-          liftFeature(None, "infix_equals", List(qualifier, arg))
-
-        case Apply(lhs @ Select(qualifier, TermName("hashCode")), List()) =>
-          liftFeature(None, "infix_hashCode", List(qualifier))
-
-        case TypeApply(Select(qualifier, TermName("asInstanceOf")), targs) =>
-          liftFeature(None, "infix_asInstanceOf", List(qualifier), targs)
-
-        case TypeApply(Select(qualifier, TermName("isInstanceOf")), targs) =>
-          liftFeature(None, "infix_isInstanceOf", List(qualifier), targs)
-
-        case Apply(lhs @ Select(qualifier, TermName("toString")), List()) =>
-          liftFeature(None, "infix_toString", List(qualifier))
-
-        case Apply(lhs @ Select(qualifier, TermName("eq")), List(arg)) =>
-          liftFeature(None, "infix_eq", List(qualifier, arg))
-
-        case Apply(lhs @ Select(qualifier, TermName("ne")), List(arg)) =>
-          liftFeature(None, "infix_ne", List(qualifier, arg))
-
-        case Apply(Select(qualifier, TermName("notify")), List()) =>
-          liftFeature(None, "infix_notify", List(qualifier))
-
-        case Apply(Select(qualifier, TermName("notifyAll")), List()) =>
-          liftFeature(None, "infix_notifyAll", List(qualifier))
-
-        case Apply(Select(qualifier, TermName("synchronized")), List(arg)) =>
-          liftFeature(None, "infix_synchronized", List(qualifier, arg))
-
-        case Apply(TypeApply(Select(qualifier, TermName("synchronized")), targs), List(arg)) =>
-          liftFeature(None, "infix_synchronized", List(qualifier, arg), targs)
-
-        case Apply(Select(qualifier, TermName("wait")), List()) =>
-          liftFeature(None, "infix_wait", List(qualifier))
-
-        case Apply(Select(qualifier, TermName("wait")), List(arg)
-          ) if arg.tpe =:= typeOf[Long] =>
-          liftFeature(None, "infix_wait", List(qualifier, arg))
-
-        case Apply(Select(qualifier, TermName("wait")), List(arg0, arg1)
-          ) if arg0.tpe =:= typeOf[Long] && arg1.tpe =:= typeOf[Int] =>
-          liftFeature(None, "infix_wait", List(qualifier, arg0, arg1))
-
-        case Try(block, catches, finalizer) => {
-          c.warning(tree.pos, "virtualization of try/catch expressions is not supported.")
-          super.transform(tree)
-        }
-
-        case Throw(expr) => {
-          c.warning(tree.pos, "virtualization of throw expressions is not supported.")
-          super.transform(tree)
-        }
-
-        case ClassDef(mods, n, _, _) if mods.hasFlag(Flag.CASE) =>
-          // sstucki: there are issues with the ordering of
-          // virtualization and expansion of case classes (i.e. some
-          // of the expanded code might be virtualized even though it
-          // should not be and vice-versa).  So until we have decided
-          // how proper virtualization of case classes should be done,
-          // any attempt to do so should fail.
-          // TR: not 100% sure what the issue is (although i vaguely
-          // remember that we had issues in Scala-Virtualized with 
-          // auto-generated case class equality methods using virtualized
-          // equality where it shouldn't). For the moment it seems like 
-          // just treating case classes as regular classes works fine.
-          c.warning(tree.pos, "virtualization of case classes is not fully supported.")
-          super.transform(tree) //don't virtualize the case class definition but virtualize its body
         case _ =>
           super.transform(tree)
       }
