@@ -157,17 +157,18 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     case class Var[T](var x: T)
     def __newVar(init: Int): Var[Int] = Var(init + 1)
     def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
-    def __readVar(lhs: Var[Int]): Int = lhs.x
+    implicit def __readVar(lhs: Var[Int]): Int = lhs.x
+    def foo(x: Int) = x.toDouble
 
     @virtualize
     def virtualizeVariablesTest() = {
       var x = 5 // x = 6
       x = 3 // x = 9
-      println(x.toString)
-      x // inject readVar
+      foo(x) // implicit __readVar injection
+      x
     }
 
-    virtualizeVariablesTest() shouldBe 9
+    virtualizeVariablesTest() shouldBe Var(9)
   }
 
   "virtualizeAnyMethods" should "be virtualized" in {

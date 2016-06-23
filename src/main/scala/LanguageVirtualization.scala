@@ -91,8 +91,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
-        // FIXME: this is not trapping any variable reads
-        // FIXME: need to make sure we don't inject a readVar into lhs of Assign
+        // TODO: don't now how to apply this to only the terms we care about since type info is not yet available
+        // need to make sure we don't inject a readVar around method names, lhs of assign statements, etc.
         // case Ident(x) if tree.symbol.isTerm && tree.symbol.asTerm.isVar =>
         //   liftFeature(None, "__readVar", List(tree), Nil, x => x) //use ident transform on variables?
 
