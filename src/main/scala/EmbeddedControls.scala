@@ -1,7 +1,7 @@
 package org.scala_lang.virtualized
 
 import language.experimental.macros
-import scala.reflect.macros.blackbox.Context
+import scala.reflect.macros.whitebox.Context
 
 /**
  * Default implementation of virtualized Scala control structures.
@@ -76,6 +76,10 @@ trait EmbeddedControls {
   def infix_wait(x: AnyRef, timeout: Long, nanos: Int): Unit = macro anyRef_wait2
   def infix_clone(x: AnyRef): AnyRef = macro anyRef_clone
   def infix_finalize(x: AnyRef): Unit = macro anyRef_finalize
+
+  // Define universal arithmetic for all primitive types 
+  def infix_+[A<:AnyVal, B<:AnyVal](lhs: A, rhs: B): AnyVal = macro anyVal_+[A,B]
+
 }
 
 /**
@@ -87,6 +91,7 @@ private object EmbeddedControls {
 
   def ifThenElseImpl[T](c: Context)(
     cond: c.Expr[Boolean], thenBr: c.Expr[T], elseBr: c.Expr[T]): c.Expr[T] = {
+    
     import c.universe._
     c.Expr(q"if ($cond) $thenBr else $elseBr")
   }
@@ -269,4 +274,24 @@ private object EmbeddedControls {
     import c.universe._
     c.Expr(q"$x.finalize()")
   }
+
+
+  // TODO: move me and add hook for lms
+  // TODO: revert import statement to blackbox macros when this is moved
+  def anyVal_+[A<:AnyVal, B<:AnyVal](c: Context)(lhs: c.Expr[A], rhs: c.Expr[B])(implicit ta: c.WeakTypeTag[A], tb: c.WeakTypeTag[B]): c.Expr[AnyVal] = {
+    import c.universe._
+
+    val resultType = 
+      if (weakTypeOf[A] weak_<:< weakTypeOf[B]) weakTypeOf[B]
+      else if (weakTypeOf[B] weak_<:< weakTypeOf[A]) weakTypeOf[A]
+      else {
+        c.error(c.enclosingPosition, s"Cannot add ${weakTypeOf[A]} and ${weakTypeOf[B]}") // panic (byte/short + char ???)
+        weakTypeOf[AnyVal]
+      }
+
+    //if (resultType weak_<:< typeOf[Int]) // minimum result type is Int (but maybe short + short should => short)
+
+    c.Expr(q"($lhs.+($rhs):$resultType)")
+  }
+
 }

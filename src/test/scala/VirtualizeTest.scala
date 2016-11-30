@@ -21,25 +21,28 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
   "virtualizeSourceContext" should "be virtualized" in {
     implicit class OpsCls(lhs: Boolean){
-      def op(rhs: Boolean)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName
+      def op(rhs: Boolean)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
     }
 
-    def virtualizeContext() = true op false
+    def virtualizeContext() = {
+      val foo = true op false
+      foo
+    }
 
     //Careful, these tests depend on the line numbers they are written on!!
-    virtualizeContext() should be("VirtualizeTest.scala:27:36 virtualizeContext")
+    virtualizeContext() should be("VirtualizeTest.scala:28:22 op Some(foo)")
   }
 
   "virtualizeSourceContextNested" should "be virtualized" in {
 
     def a()(implicit pos: SourceContext) = b()
     def b()(implicit pos: SourceContext) = c()
-    def c()(implicit pos: SourceContext) = pos.toString + " " + pos.methodName
+    def c()(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
 
     //SourceContext macro should only be applied at the highest level
     //Afterwards the implicit parameter should be passed down the forwarding calls
     def virtualizeContext() = a()
-    virtualizeContext() should be("VirtualizeTest.scala:41:32 virtualizeContext")
+    virtualizeContext() should be("VirtualizeTest.scala:44:32 a None")
   }
 
   def infix_+(x1: String, x2: Boolean): String = "trans"
@@ -65,12 +68,21 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   "method virtualizeIfTest" should "be virtualized" in {
+    def m[T:Manifest](x: T) = manifest[T]
 
     @virtualize
     def virtualizeIfTest(cs: Boolean*) = if (cs) "yep" else "nope"
 
     virtualizeIfTest(true, false) should be("nope")
     virtualizeIfTest(true, true) should be("yep")
+    m(virtualizeIfTest(true, false)) shouldBe manifest[String]
+
+    @virtualize
+    def virtualizeSuperTypeIfTest(cs: Boolean*) = if (cs) List(1,2,3) else "nope"
+
+    virtualizeSuperTypeIfTest(true, false) shouldBe "nope"
+    virtualizeSuperTypeIfTest(true, true) shouldBe List(1,2,3)
+    m(virtualizeSuperTypeIfTest(true, false)) shouldBe manifest[Object with java.io.Serializable]
   }
 
   "object VirtualizeIfTest" should "be virtualized" in {
@@ -127,6 +139,13 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
     defaultIfTest(false) should be("nope")
     defaultIfTest(true) should be("yep")
+
+    @virtualize
+    def defaultSuperTypeIfTest(c: Boolean) = if (c) List(1,2,3) else "nope"
+
+    defaultSuperTypeIfTest(false) shouldBe "nope"
+    defaultSuperTypeIfTest(true) shouldBe List(1,2,3)
+
   }
 
   // Should use inner virtualized `__ifThenElse`
@@ -157,18 +176,24 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     case class Var[T](var x: T)
     def __newVar(init: Int): Var[Int] = Var(init + 1)
     def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
-    implicit def __readVar(lhs: Var[Int]): Int = lhs.x
-    def foo(x: Int) = x.toDouble
+    def __readVar(lhs: Var[Int]): Int = lhs.x
 
     @virtualize
     def virtualizeVariablesTest() = {
       var x = 5 // x = 6
       x = 3 // x = 9
-      foo(x) // implicit __readVar injection
-      x
+      x      // __readVar injection
     }
 
-    virtualizeVariablesTest() shouldBe Var(9)
+    virtualizeVariablesTest() shouldBe 9
+  }
+
+  "primitiveArithmetic" should "have the right result type" in {
+    "val a: Double = infix_+(3, 5.0)" should compile
+    "val b: Long = infix_+(3, 5l)" should compile
+    "val c: Float = infix_+(3f, 5l)" should compile
+    "val d: Double = infix_+(5.0, 5f)" should compile
+    "val e: Int = infix_+(3, 5.0)" shouldNot compile
   }
 
   "virtualizeAnyMethods" should "be virtualized" in {

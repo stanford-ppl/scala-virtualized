@@ -89,12 +89,19 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         /* Variables */
 
         case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
+          // leaving it a var makes it easier to revert when custom __newVar isn't supplied
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
-
-        // TODO: don't now how to apply this to only the terms we care about since type info is not yet available
-        // need to make sure we don't inject a readVar around method names, lhs of assign statements, etc.
-        // case Ident(x) if tree.symbol.isTerm && tree.symbol.asTerm.isVar =>
-        //   liftFeature(None, "__readVar", List(tree), Nil, x => x) //use ident transform on variables?
+          
+          // TODO: mangle Var name to make readVar calls happen explicitly
+          // val s = TermName(sym+"$v")
+          // val v = ValDef(mods, s, tpt, liftFeature(None, "__newVar", List(rhs)))
+          // val d = DefDef(Modifiers(), sym, Nil, Nil, tpt, liftFeature(None, "__readVar", List(Ident(s))))
+          // v //q"$v ; $d"
+        
+        case Assign(lhs, rhs) =>
+          liftFeature(None, "__assign", List(lhs, rhs))
+        // case Assign(Ident(lhs), rhs) =>
+        //   liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))
 
         /* Control structures (keywords) */
 
@@ -103,9 +110,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         case Return(e) =>
           liftFeature(None, "__return", List(e))
-
-        case Assign(lhs, rhs) =>
-          liftFeature(None, "__assign", List(lhs, rhs))
 
         case LabelDef(sym, List(), If(cond, Block(body :: Nil, Apply(Ident(label),
           List())), Literal(Constant(())))) if label == sym => // while(){}
