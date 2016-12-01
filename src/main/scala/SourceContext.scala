@@ -108,8 +108,8 @@ private object SourceContextMacro {
 
       val method: String = try {
         val tightTree = c.parse(tight)
-        c.info(c.enclosingPosition, "Tight: " + tight, true)
-        c.info(c.enclosingPosition, showRaw(tightTree), true)
+        // c.info(c.enclosingPosition, "Tight: " + tight, true)
+        // c.info(c.enclosingPosition, showRaw(tightTree), true)
 
         tightTree match {
           case Select(_,parsedMethod)           => parsedMethod.decodedName.toString //tight.replace(name,"")
