@@ -65,13 +65,11 @@ private object SourceContextMacro {
     val column = pos.column
 
     def isBreak(x: Char) = x == ' ' || x == '.' || x == '(' || x == ')' || x == ';'
-    def isLineBreak(x: Char) = x == '\n' || x == '\r' || x == ';'
-    lazy val ValrDef = ".*va[lr]\\s+(.*)\\s*=.*".r
 
     // HACK: Haven't yet found a simpler way of determining which method call this is in reference to
+    // Macros have a lot of support for enclosing context, but apparently very little for immediate context of implicit call
     // However, we can easily get the source line and general method call location using the column number
-    // We can then re-parse the entire line to get the variable name
-    // And reparse the immediate area (stopping at parentheses, spaces, periods, semicolons) to get the method
+    // We can then reparse the immediate area (stopping at parentheses, spaces, periods, semicolons) to get the method
     // Also include try-catch blocks for now just in case we somehow mess up when splicing the string
     val (methodName, assignedVariable) = if (line > 0 && column > 0) {
       val str = pos.source.lineToString(line-1)
@@ -86,25 +84,8 @@ private object SourceContextMacro {
       if (end >= str.length || isBreak(str(end))) end = end - 1
       val tight = str.slice(start, end+1).trim
 
-      /*var lineEnd = end
-      var lineStart = start
-      while (lineStart >= 0 && !isLineBreak(str(lineStart))) lineStart -= 1
-      while (lineEnd < str.length && !isLineBreak(str(lineEnd))) lineEnd += 1
-      if (lineStart < 0 || isLineBreak(str(lineStart))) lineStart += 1
-      if (lineEnd >= str.length || isLineBreak(str(lineEnd))) lineEnd -= 1
-      val defLine = str.slice(lineStart, lineEnd+1)*/
-
-      /*val variable: Option[String] = try {
-        val tree = c.parse(defLine)
-        tree match {
-          case ValDef(_,TermName(name),_,rhs) => Some(name)
-          case _ => None
-        }
-      }
-      catch {case e:scala.reflect.macros.ParseException =>
-        None
-      }*/
-
+      // The scala compiler MUST have had this information at some point to give us the correct column,
+      // but it seems there's no way to get it?
       val method: String = try {
         val tightTree = c.parse(tight)
         //c.info(c.enclosingPosition, "Tight: " + tight, true)
@@ -120,15 +101,31 @@ private object SourceContextMacro {
         tight
       }
 
+      val owner = c.internal.enclosingOwner
+      val variable = if (!owner.isMethod && owner.isTerm) Some(owner.name.toString) else None
+
+      // Gives enclosing trait (too high!)
+      /*owner match {
+        case NoSymbol =>
+        case _ => c.info(c.enclosingPosition, owner.owner.toString, true)
+      }
+
       //val allInfo = s"${owner.toString}, isMethod=${owner.isMethod}, isModule=${owner.isModule}, isModuleClass=${owner.isModuleClass}, isTerm=${owner.isTerm}, isType=${owner.isType}"
       //c.info(c.enclosingPosition, allInfo, true)
       //c.info(c.enclosingPosition, c.internal.enclosingDef.toString, true)
 
-      c.warning(c.enclosingPosition, showRaw(c.prefix.tree))
-      c.warning(c.enclosingPosition, showCode(c.prefix.tree))
+      /*def symbol(cc: Context) = {
+        import cc.universe._
+        cc.info(cc.enclosingPosition, "tree: " + cc.internal.enclosingOwner.toString, true)
+        //c.info(c.enclosingPosition, "tree: " + showRaw(c.prefix.tree), true)
+      }*/
 
-      val owner = c.internal.enclosingOwner
-      val variable = if (!owner.isMethod && owner.isTerm) Some(owner.name.toString) else None
+      // Gives same owner for all
+      // c.openMacros.foreach{cc => symbol(cc) }
+
+      //c.info(c.enclosingPosition, "ALL: " + c.enclosingMacros.map{c => (c,c.prefix.tree)}.map{case (c,t) => c.showCode(t)}.mkString("\n"), true)
+      //c.warning(c.enclosingPosition, showCode(c.prefix.tree))
+      */
 
       (method, variable)
     }
