@@ -89,9 +89,9 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   "virtualizeSourceContextMultiOp" should "be virtualized" in {
-    val x = "X"----"Y"++++"Z"
+    val x = "X"----"Y"++++"Z"----"Q"
 
-    x should be ("X VirtualizeTest.scala:92:16 ---- Some(x) Y VirtualizeTest.scala:92:23 ++++ Some(x) Z")
+    x should be ("X VirtualizeTest.scala:92:16 ---- Some(x) Y VirtualizeTest.scala:92:23 ++++ Some(x) Z VirtualizeTest.scala:92:30 ---- Some(x) Q")
   }
 
 

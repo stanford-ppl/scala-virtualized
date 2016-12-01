@@ -101,7 +101,7 @@ private object SourceContextMacro {
         def extractMethod(tree: Tree, depth: Int = 0): String = tree match {
           case Select(term,func) => func.decodedName.toString //tight.replace(name,"")
           case Apply(Select(term,func), _) if depth == 0 => func.decodedName.toString
-          case Apply(Select(term,func), _) => extractMethod(term)
+          case Apply(Select(term,func), _) => extractMethod(term, depth-1)
           case _ => tight
         }
         /**
