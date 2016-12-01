@@ -19,7 +19,7 @@ import scala.annotation.StaticAnnotation
   *   val name: String
   *   val comment: String
   * }
-  * 
+  *
   * def Region(key: Rep[Int], name: Rep[String], comment: Rep[String]): Rep[Region] = Record (
   *   key = key,
   *   name = name,
@@ -43,7 +43,7 @@ object virtualizeRecord {
     val tree = annottees.head.tree
     tree match {
       // look for case classes
-      case cd@ClassDef(mods, className: TypeName, tparams, impl@Template(parents, selfType, bodyList)) if mods.hasFlag(Flag.CASE) => 
+      case cd@ClassDef(mods, className: TypeName, tparams, impl@Template(parents, selfType, bodyList)) if mods.hasFlag(Flag.CASE) =>
         val (fields, methods) = bodyList.partition { case _:ValDef => true case _ => false }
         if (fields.isEmpty)
           c.abort(c.enclosingPosition, "case classes need at least one field in order to be transformed into records")

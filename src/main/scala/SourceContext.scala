@@ -86,15 +86,15 @@ private object SourceContextMacro {
       if (end >= str.length || isBreak(str(end))) end = end - 1
       val tight = str.slice(start, end+1).trim
 
-      var lineEnd = end
+      /*var lineEnd = end
       var lineStart = start
       while (lineStart >= 0 && !isLineBreak(str(lineStart))) lineStart -= 1
       while (lineEnd < str.length && !isLineBreak(str(lineEnd))) lineEnd += 1
       if (lineStart < 0 || isLineBreak(str(lineStart))) lineStart += 1
       if (lineEnd >= str.length || isLineBreak(str(lineEnd))) lineEnd -= 1
-      val defLine = str.slice(lineStart, lineEnd+1)
+      val defLine = str.slice(lineStart, lineEnd+1)*/
 
-      val variable: Option[String] = try {
+      /*val variable: Option[String] = try {
         val tree = c.parse(defLine)
         tree match {
           case ValDef(_,TermName(name),_,rhs) => Some(name)
@@ -103,13 +103,12 @@ private object SourceContextMacro {
       }
       catch {case e:scala.reflect.macros.ParseException =>
         None
-      }
-
+      }*/
 
       val method: String = try {
         val tightTree = c.parse(tight)
-        // c.info(c.enclosingPosition, "Tight: " + tight, true)
-        // c.info(c.enclosingPosition, showRaw(tightTree), true)
+        //c.info(c.enclosingPosition, "Tight: " + tight, true)
+        //c.info(c.enclosingPosition, showRaw(tightTree), true)
 
         tightTree match {
           case Select(_,parsedMethod)           => parsedMethod.decodedName.toString //tight.replace(name,"")
@@ -120,6 +119,16 @@ private object SourceContextMacro {
       catch {case e:scala.reflect.macros.ParseException =>
         tight
       }
+
+      //val allInfo = s"${owner.toString}, isMethod=${owner.isMethod}, isModule=${owner.isModule}, isModuleClass=${owner.isModuleClass}, isTerm=${owner.isTerm}, isType=${owner.isType}"
+      //c.info(c.enclosingPosition, allInfo, true)
+      //c.info(c.enclosingPosition, c.internal.enclosingDef.toString, true)
+
+      c.warning(c.enclosingPosition, showRaw(c.prefix.tree))
+      c.warning(c.enclosingPosition, showCode(c.prefix.tree))
+
+      val owner = c.internal.enclosingOwner
+      val variable = if (!owner.isMethod && owner.isTerm) Some(owner.name.toString) else None
 
       (method, variable)
     }

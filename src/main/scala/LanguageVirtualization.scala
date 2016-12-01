@@ -82,26 +82,54 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
     // this map collects dsls at definition site so it can access them at call site
     // TODO: this is not a safe feature which should rather be removed as it is not longer used in Delite
     val dslScopes:scala.collection.mutable.HashMap[String, (Tree, Tree, Tree)] = new scala.collection.mutable.HashMap()
-    
+
+    // Call for transforming Blocks. Allows expanding a single statement to multiple statements within a given scope
+    private def transformStm(tree: Tree): List[Tree] = tree match {
+      case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
+        // TODO: mangle Var name to make readVar calls happen explicitly
+        val s = TermName(sym+"$v")
+        val v = ValDef(mods, s, tpt, liftFeature(None, "__newVar", List(rhs)))
+        val d = DefDef(Modifiers(), sym, Nil, Nil, tpt, liftFeature(None, "__readVar", List(Ident(s))))
+
+        List(v, d)
+        //val result = q"..${List(v,d)}"
+
+        //c.info(c.enclosingPosition, showCode(result), true)
+        //c.info(c.enclosingPosition, showRaw(result), true)
+        //result
+
+      case _ => List(transform(tree))
+    }
+
+
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
+        case  Block(stms, ret) =>
+          val stms2 = stms.flatMap(transformStm) ++ transformStm(ret)
+
+          Block(stms2.dropRight(1), stms2.last)
 
         /* Variables */
 
-        case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
+        // case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
           // leaving it a var makes it easier to revert when custom __newVar isn't supplied
-          ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
-          
+          // ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
+
           // TODO: mangle Var name to make readVar calls happen explicitly
           // val s = TermName(sym+"$v")
           // val v = ValDef(mods, s, tpt, liftFeature(None, "__newVar", List(rhs)))
           // val d = DefDef(Modifiers(), sym, Nil, Nil, tpt, liftFeature(None, "__readVar", List(Ident(s))))
-          // v //q"$v ; $d"
-        
-        case Assign(lhs, rhs) =>
-          liftFeature(None, "__assign", List(lhs, rhs))
-        // case Assign(Ident(lhs), rhs) =>
-        //   liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))
+          // val result = q"..${List(v,d)}"
+
+          // c.info(c.enclosingPosition, showCode(result), true)
+          // c.info(c.enclosingPosition, showRaw(result), true)
+          // result
+
+        // case Assign(lhs, rhs) =>
+        //  liftFeature(None, "__assign", List(lhs, rhs))
+
+        case Assign(Ident(lhs), rhs) =>
+          liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))
 
         /* Control structures (keywords) */
 
@@ -136,7 +164,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case Apply(Select(qual @ Literal(Constant(s: String)), TermName("$plus")), List(arg)) =>
           liftFeature(None, "infix_$plus", List(qual, arg))
 
-        /* Methods defined on Any/AnyRef with arguments */ 
+        /* Methods defined on Any/AnyRef with arguments */
 
         case Apply(Select(qualifier, TermName("$eq$eq")), List(arg)) =>
           liftFeature(None, "infix_$eq$eq", List(qualifier, arg))
@@ -173,7 +201,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         /* Methods defined on Any/AnyRef without arguments */
 
-        // For 0-arg methods we get a different tree depending on if the user writes empty parens 'x.clone()' or no parens 'x.clone' 
+        // For 0-arg methods we get a different tree depending on if the user writes empty parens 'x.clone()' or no parens 'x.clone'
         // We always match on the empty parens version first
 
         case Apply(Select(qualifier, TermName("toString")), List()) =>
@@ -240,13 +268,13 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           // how proper virtualization of case classes should be done,
           // any attempt to do so should fail.
           // TR: not 100% sure what the issue is (although i vaguely
-          // remember that we had issues in Scala-Virtualized with 
+          // remember that we had issues in Scala-Virtualized with
           // auto-generated case class equality methods using virtualized
-          // equality where it shouldn't). For the moment it seems like 
+          // equality where it shouldn't). For the moment it seems like
           // just treating case classes as regular classes works fine.
           c.warning(tree.pos, "virtualization of case classes is not fully supported.")
           super.transform(tree) //don't virtualize the case class definition but virtualize its body
-        
+
         /* Scopes */
 
         // this is a helper `method` for DSL generation in Forge

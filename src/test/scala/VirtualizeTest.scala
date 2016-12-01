@@ -69,7 +69,7 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   "virtualizeSourceContextMultiLine" should "be virtualized" in {
     val x =
             "X" ++++ "Z"
-    x should be("X VirtualizeTest.scala:71:17 ++++ None Z") // TODO
+    x should be("X VirtualizeTest.scala:71:17 ++++ Some(x) Z") // TODO
   }
 
   "virtualizeSourceContextOthers" should "be virtualized" in {
