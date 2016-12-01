@@ -46,7 +46,7 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
   implicit class OpsCls(lhs: String) {
     def ++++(rhs: String)(implicit pos: SourceContext) = lhs + " " + pos.toString + " " + pos.methodName + " " + pos.assignedVariable + " " + rhs
-    def >>(rhs: String)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
+    def ----(rhs: String)(implicit pos: SourceContext) = lhs + " " + pos.toString + " " + pos.methodName + " " + pos.assignedVariable + " " + rhs
     def ?(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
     def infix(implicit pos: SourceContext): String = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
     def unary_!(implicit pos: SourceContext): String = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
@@ -77,15 +77,21 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     var z = "HELLO".method("WORLD", "!")
     var x = !q
     var m = !x ++++ !z
-    var w = "X">>"Y"
+    var w = "X"++++"Y"
     var y = "32"?
 
     q should be ("VirtualizeTest.scala:76:21 infix Some(q)")    // Method calls without parentheses - col is at start of term
     z should be ("VirtualizeTest.scala:77:27 method Some(z)")   // Method calls with parentheses - col is at opening paren
     x should be ("VirtualizeTest.scala:78:13 unary_! Some(x)")
     m should be ("VirtualizeTest.scala:79:13 unary_! Some(m) VirtualizeTest.scala:79:16 ++++ Some(m) VirtualizeTest.scala:79:21 unary_! Some(m)")
-    w should be ("VirtualizeTest.scala:80:16 >> Some(w)")
+    w should be ("X VirtualizeTest.scala:80:16 ++++ Some(w) Y")
     y should be ("VirtualizeTest.scala:81:17 ? Some(y)")
+  }
+
+  "virtualizeSourceContextMultiOp" should "be virtualized" in {
+    val x = "X"----"Y"++++"Z"
+
+    x should be ("X VirtualizeTest.scala:92:16 ---- Some(x) Y VirtualizeTest.scala:92:23 ++++ Some(x) Z")
   }
 
 
