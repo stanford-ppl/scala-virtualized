@@ -12,7 +12,7 @@ import scala.language.experimental.macros
 
 trait SourceContext {
 
-  /** The full path of the source file of the calling location 
+  /** The full path of the source file of the calling location
    */
   def path: String
 
@@ -28,11 +28,11 @@ trait SourceContext {
    */
   def column: Int
 
-  /** The name of the method being called  
+  /** The name of the method being called
    */
   def methodName: String
 
-  /** The name of the value / variable instantiated to hold the result of the method 
+  /** The name of the value / variable instantiated to hold the result of the method
    */
   def assignedVariable: Option[String]
 
@@ -48,7 +48,7 @@ object SourceContext {
 
   implicit def _sc: SourceContext = macro SourceContextMacro.impl
 
-  def apply(path: String, fileName: String, line: Int, column: Int, methodName: String, assignedVariable: Option[String]): SourceContext = 
+  def apply(path: String, fileName: String, line: Int, column: Int, methodName: String, assignedVariable: Option[String]): SourceContext =
     new ConcreteSourceContext(path, fileName, line, column, methodName, assignedVariable)
 
   private class ConcreteSourceContext(val path: String, val fileName: String, val line: Int, val column: Int, val methodName: String, val assignedVariable: Option[String]) extends SourceContext
@@ -63,8 +63,75 @@ private object SourceContextMacro {
     val filename = pos.source.file.name
     val line = pos.line
     val column = pos.column
-    val methodName = c.macroApplication.symbol.name.toString //"<unknown>" //c.internal.enclosingOwner.name.toString
-    val assignedVariable = Some(c.enclosingDef.name.toString)
+
+    def isBreak(x: Char) = x == ' ' || x == '.' || x == '(' || x == ')' || x == ';'
+    def isLineBreak(x: Char) = x == '\n' || x == '\r' || x == ';'
+    lazy val ValrDef = ".*va[lr]\\s+(.*)\\s*=.*".r
+
+    // HACK: Haven't yet found a simpler way of determining which method call this is in reference to
+    // However, we can easily get the source line and general method call location using the column number
+    // We can then re-parse the entire line to get the variable name
+    // And reparse the immediate area (stopping at parentheses, spaces, periods, semicolons) to get the method
+    // Also include try-catch blocks for now just in case we somehow mess up when splicing the string
+    val (methodName, assignedVariable) = if (line > 0 && column > 0) {
+      val str = pos.source.lineToString(line-1)
+
+      var start = column-1
+      var end = column-1
+      if (isBreak(str(column-1))) start -= 1
+
+      while (start >= 0 && !isBreak(str(start))) start -= 1
+      while (end < str.length && !isBreak(str(end))) end += 1
+      if (start < 0 || isBreak(str(start))) start = start + 1
+      if (end >= str.length || isBreak(str(end))) end = end - 1
+      val tight = str.slice(start, end+1).trim
+
+      var lineEnd = end
+      var lineStart = start
+      while (lineStart >= 0 && !isLineBreak(str(lineStart))) lineStart -= 1
+      while (lineEnd < str.length && !isLineBreak(str(lineEnd))) lineEnd += 1
+      if (lineStart < 0 || isLineBreak(str(lineStart))) lineStart += 1
+      if (lineEnd >= str.length || isLineBreak(str(lineEnd))) lineEnd -= 1
+      val defLine = str.slice(lineStart, lineEnd+1)
+
+      val variable: Option[String] = try {
+        val tree = c.parse(defLine)
+        tree match {
+          case ValDef(_,TermName(name),_,rhs) => Some(name)
+          case _ => None
+        }
+      }
+      catch {case e:scala.reflect.macros.ParseException =>
+        None
+      }
+
+
+      val method: String = try {
+        val tightTree = c.parse(tight)
+        c.info(c.enclosingPosition, "Tight: " + tight, true)
+        c.info(c.enclosingPosition, showRaw(tightTree), true)
+
+        tightTree match {
+          case Select(_,parsedMethod)           => parsedMethod.decodedName.toString //tight.replace(name,"")
+          case Apply(Select(_,parsedMethod), _) => parsedMethod.decodedName.toString
+          case _ => tight
+        }
+      }
+      catch {case e:scala.reflect.macros.ParseException =>
+        tight
+      }
+
+      (method, variable)
+    }
+    else {
+      ("<unknown>", None)
+    }
+
+    // macroApplication doesn't have what we need here (it just gives a pointer to the def _sc line above)
+    //val methodName = "<unknown>" //c.macroApplication.symbol.name.toString //c.internal.enclosingOwner.name.toString
+
+    // enclosingDef is deprecated (and also gives a completely wrong answer)
+    //val assignedVariable = Some(c.enclosingDef.name.toString)
     c.Expr(q"SourceContext($path, $filename, $line, $column, $methodName, $assignedVariable)")
   }
 }

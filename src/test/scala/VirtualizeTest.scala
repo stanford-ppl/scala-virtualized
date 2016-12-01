@@ -44,6 +44,50 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     def virtualizeContext() = a()
     virtualizeContext() should be("VirtualizeTest.scala:44:32 a None")
   }
+  implicit class OpsCls(lhs: String) {
+    def ++++(rhs: String)(implicit pos: SourceContext) = lhs + " " + pos.toString + " " + pos.methodName + " " + pos.assignedVariable + " " + rhs
+    def >>(rhs: String)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
+    def ?(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
+    def infix(implicit pos: SourceContext): String = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
+    def unary_!(implicit pos: SourceContext): String = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
+    def method(x: String, y: String)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
+  }
+
+  "virtualizeSourceContextSequential" should "be virtualized" in {
+    val x = "X" ++++ "Y" ++++ "Z"
+    x should be("X VirtualizeTest.scala:57:17 ++++ Some(x) Y VirtualizeTest.scala:57:26 ++++ Some(x) Z")
+  }
+
+  "virtualizeSourceContextMultiDef" should "be virtualized" in {
+    val x = "X" ++++ "Y"; val y = "X" ++++ "Y"
+
+    x should be("X VirtualizeTest.scala:62:17 ++++ Some(x) Y")
+    y should be("X VirtualizeTest.scala:62:39 ++++ Some(y) Y")
+  }
+
+  // TODO: Expected behavior in this case? Should we try to backtrack to the most recent val/var?
+  "virtualizeSourceContextMultiLine" should "be virtualized" in {
+    val x =
+            "X" ++++ "Z"
+    x should be("X VirtualizeTest.scala:71:17 ++++ None Z") // TODO
+  }
+
+  "virtualizeSourceContextOthers" should "be virtualized" in {
+    var q = "HELLO".infix
+    var z = "HELLO".method("WORLD", "!")
+    var x = !q
+    var m = !x ++++ !z
+    var w = "X">>"Y"
+    var y = "32"?
+
+    q should be ("VirtualizeTest.scala:76:21 infix Some(q)")    // Method calls without parentheses - col is at start of term
+    z should be ("VirtualizeTest.scala:77:27 method Some(z)")   // Method calls with parentheses - col is at opening paren
+    x should be ("VirtualizeTest.scala:78:13 unary_! Some(x)")
+    m should be ("VirtualizeTest.scala:79:13 unary_! Some(m) VirtualizeTest.scala:79:16 ++++ Some(m) VirtualizeTest.scala:79:21 unary_! Some(m)")
+    w should be ("VirtualizeTest.scala:80:16 >> Some(w)")
+    y should be ("VirtualizeTest.scala:81:17 ? Some(y)")
+  }
+
 
   def infix_+(x1: String, x2: Boolean): String = "trans"
 
@@ -206,7 +250,7 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     def infix_isInstanceOf[T](x: List[Int]) = Nil
     def infix_toString(x: List[Int]) = Nil
     def infix_getClass(x: List[Int]) = Nil
-  
+
     @virtualize
     def virtualizeAnyTest(x: List[Int], y: List[Int]) = {
       (x == y) ++
@@ -244,7 +288,7 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
       x.notify ++ x.notify() ++
       x.notifyAll ++ x.notifyAll() ++
       x.synchronized("hello") ++
-      x.wait ++ x.wait() ++ 
+      x.wait ++ x.wait() ++
       x.wait(10) ++
       x.wait(10, 10) ++
       x.clone ++ x.clone() ++
