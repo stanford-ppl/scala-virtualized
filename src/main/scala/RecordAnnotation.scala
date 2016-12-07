@@ -56,7 +56,8 @@ object virtualizeRecord {
 
         val fieldList = fields map {
           case ValDef(mods, termName, typeIdent, rhs) if mods.hasFlag(Flag.MUTABLE) =>
-            q"var $termName: $typeIdent"
+            //q"var $termName: $typeIdent"
+            c.abort(c.enclosingPosition, "virtualization of variable fields is currently unsupported")
           case ValDef(mods, termName, typeIdent, rhs) =>
             q"val $termName: $typeIdent"
         }
