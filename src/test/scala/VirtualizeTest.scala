@@ -212,6 +212,21 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeInnerIfTest(true) should be("nope")
   }
 
+  "virtualizeThenOnlyTest" should "be virtualized" in {
+    def __ifThenElse[T](c: Boolean, thenBr: => T, elseBr: => T): T = if (!c) thenBr else elseBr
+
+    var x = 3
+    def set() { x = 5 }
+
+    @virtualize
+    def test() = {
+      if (false) { set() }
+      x
+    }
+
+    test() shouldBe 5
+  }
+
   "virtualizeWhileDo" should "be virtualized" in {
     def __whileDo(cond: Seq[Boolean], body: => String): String = if (cond forall (_ == true)) body else "nope"
 
@@ -222,20 +237,101 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeWhileTest(true, true) shouldBe "yep"
   }
 
-  "virtualizeVariables" should "be virtualized" in {
-    case class Var[T](var x: T)
-    def __newVar(init: Int): Var[Int] = Var(init + 1)
-    def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
-    def __readVar(lhs: Var[Int]): Int = lhs.x
+  case class Var[T](var x: T)
+  def __newVar(init: Int): Var[Int] = Var(init + 1)
+  def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
+  implicit def __readVar(lhs: Var[Int]): Int = lhs.x
+
+  def infix_+=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 1
+  def infix_-=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 2
+  def infix_*=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 3
+  def infix_/=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 4
+
+  "virtualizeClassFieldTest" should "be virtualized" in {
+    def __ifThenElse[T](c: Boolean, thenBr: => T, elseBr: => T): T = if (!c) thenBr else elseBr
 
     @virtualize
-    def virtualizeVariablesTest() = {
+    case class Test(x: Boolean) {
+      private var value = 5
+      def test(): Int = if (x) 5 else 3
+      def evaluate(): Int = { value = 3; value }
+    }
+
+    val x = Test(true)
+    x.test() shouldBe 3
+    x.evaluate() shouldBe 9
+    "x.value" shouldNot compile
+  }
+
+
+  "virtualizeVariables" should "be virtualized" in {
+    @virtualize
+    def virtualizeVariablesTest(): Int = {
       var x = 5 // x = 6
       x = 3 // x = 9
       x      // __readVar injection
     }
 
     virtualizeVariablesTest() shouldBe 9
+  }
+
+  "virtualizePlusEquals" should "be virtualized" in {
+    @virtualize
+    var x = 5
+
+    @virtualize
+    def test(): Int = {
+      x += 3  // 10
+      x -= 3  // 15
+      x *= 3  // 21
+      x /= 3  // 28
+      x
+    }
+    test() shouldBe 28
+  }
+
+  "virtualizeVariables2" should "not be virtualized" in {
+    var x = 5
+
+    @virtualize
+    def virtualizeVariablesTest(): Int = {
+      x = 3
+      x
+    }
+    virtualizeVariablesTest() shouldBe 3
+  }
+
+  "virtualizeVariables3" should "be virtualized" in {
+    @virtualize
+    var x = 5
+
+    @virtualize
+    def virtualizeVariablesTest(): Int = {
+      x = 3
+      x
+    }
+    virtualizeVariablesTest() shouldBe 9
+  }
+
+  // Not supported
+  "virtualizeVariables4" should "be virtualized" in {
+    var x = 5
+
+    @virtualize
+    def virtualizeVariablesTest1(): Int = {
+      var x = 5
+      x = 3
+      x
+    }
+
+    @virtualize
+    def virtualizeVariablesTest2(): Int = {
+      x = 3
+      x
+    }
+
+    virtualizeVariablesTest1() shouldBe 9
+    virtualizeVariablesTest2() shouldBe 3
   }
 
   "primitiveArithmetic" should "have the right result type" in {

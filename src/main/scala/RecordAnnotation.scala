@@ -55,7 +55,9 @@ object virtualizeRecord {
         assert(methods.head match { case _: DefDef => true }) // the constructor
 
         val fieldList = fields map {
-          case ValDef(_, termName, typeIdent, rhs) =>
+          case ValDef(mods, termName, typeIdent, rhs) if mods.hasFlag(Flag.MUTABLE) =>
+            q"var $termName: $typeIdent"
+          case ValDef(mods, termName, typeIdent, rhs) =>
             q"val $termName: $typeIdent"
         }
         val atype = q"type $className = Record { ..$fieldList }"

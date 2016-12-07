@@ -57,7 +57,7 @@ import scala.collection.mutable
 trait LanguageVirtualization extends MacroModule with TransformationUtils with DataDefs {
   import c.universe._
 
-  def virtualize(t: Tree): (Tree, Seq[DSLFeature]) = VirtualizationTransformer(t)
+  def virtualize(t: Tree): (List[Tree], Seq[DSLFeature]) = VirtualizationTransformer(t)
 
   object VirtualizationTransformer {
     def apply(tree: Tree) = {
@@ -85,18 +85,19 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
     // Call for transforming Blocks. Allows expanding a single statement to multiple statements within a given scope
     private def transformStm(tree: Tree): List[Tree] = tree match {
+      // TODO: Name mangling is nice and elegant, but becomes an issue when we assume we've mangled
+      // names which actually haven't been changed. Would need to come up with a solution to check to see
+      // if a name's been mangled that also respects scoping (and potentially incremental compilation?)
+      /*
       case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
-        // TODO: mangle Var name to make readVar calls happen explicitly
+        // Mangle Var name to make readVar calls happen explicitly
         val s = TermName(sym+"$v")
+        // leaving it a var makes it easier to revert when custom __newVar isn't supplied
         val v = ValDef(mods, s, tpt, liftFeature(None, "__newVar", List(rhs)))
-        val d = DefDef(Modifiers(), sym, Nil, Nil, tpt, liftFeature(None, "__readVar", List(Ident(s))))
+        val d = DefDef(mods, sym, Nil, Nil, tpt, liftFeature(None, "__readVar", List(Ident(s))))
 
         List(v, d)
-        //val result = q"..${List(v,d)}"
-
-        //c.info(c.enclosingPosition, showCode(result), true)
-        //c.info(c.enclosingPosition, showRaw(result), true)
-        //result
+      */
 
       case _ => List(transform(tree))
     }
@@ -104,32 +105,47 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
     override def transform(tree: Tree): Tree = atPos(tree.pos) {
       tree match {
-        case  Block(stms, ret) =>
+        /* Attempt to virtualize vars in both class bodies and blocks **/
+        case Template(parents, selfType, bodyList) =>
+          val body = bodyList.flatMap(transformStm)
+
+          Template(parents, selfType, body)
+
+        case Block(stms, ret) =>
           val stms2 = stms.flatMap(transformStm) ++ transformStm(ret)
 
           Block(stms2.dropRight(1), stms2.last)
 
+
         /* Variables */
+        case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
+          // TODO: What about case like:
+          // var x: Option[Int] = None
+          // x = Some(3)
+          // __newVar: Var[Option[Int]]
+          ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
-        // case ValDef(mods, sym, tpt, rhs) if mods.hasFlag(Flag.MUTABLE) =>
-          // leaving it a var makes it easier to revert when custom __newVar isn't supplied
-          // ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
+        case Assign(lhs, rhs) =>
+          liftFeature(None, "__assign", List(lhs, rhs))
 
-          // TODO: mangle Var name to make readVar calls happen explicitly
-          // val s = TermName(sym+"$v")
-          // val v = ValDef(mods, s, tpt, liftFeature(None, "__newVar", List(rhs)))
-          // val d = DefDef(Modifiers(), sym, Nil, Nil, tpt, liftFeature(None, "__readVar", List(Ident(s))))
-          // val result = q"..${List(v,d)}"
+        case Apply(Select(qualifier, TermName("$plus$eq")), List(arg)) =>     // x += y
+          liftFeature(None, "infix_$plus$eq", List(qualifier, arg))
 
-          // c.info(c.enclosingPosition, showCode(result), true)
-          // c.info(c.enclosingPosition, showRaw(result), true)
-          // result
+        case Apply(Select(qualifier, TermName("$minus$eq")), List(arg)) =>    // x -= y
+          liftFeature(None, "infix_$minus$eq", List(qualifier, arg))
 
-        // case Assign(lhs, rhs) =>
-        //  liftFeature(None, "__assign", List(lhs, rhs))
+        case Apply(Select(qualifier, TermName("$times$eq")), List(arg)) =>    // x *= y
+          liftFeature(None, "infix_$times$eq", List(qualifier, arg))
 
-        case Assign(Ident(lhs), rhs) =>
-          liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))
+        case Apply(Select(qualifier, TermName("$div$eq")), List(arg)) =>      // x /= y
+          liftFeature(None, "infix_$div$eq", List(qualifier, arg))
+
+
+
+        // Name mangling version
+        /*case Assign(Ident(lhs), rhs) =>
+          liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))*/
+
 
         /* Control structures (keywords) */
 
@@ -260,7 +276,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         /* Unsupported */
 
-        case ClassDef(mods, n, _, _) if mods.hasFlag(Flag.CASE) =>
+        case ClassDef(mods, name, tpt, body) if mods.hasFlag(Flag.CASE) =>
           // sstucki: there are issues with the ordering of
           // virtualization and expansion of case classes (i.e. some
           // of the expanded code might be virtualized even though it
@@ -346,7 +362,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           super.transform(tree)
       }
     }
-    def apply(tree: c.universe.Tree): (Tree, Seq[DSLFeature]) =
-      (transform(tree), lifted.toSeq)
+    def apply(tree: c.universe.Tree): (List[Tree], Seq[DSLFeature]) =
+      (transformStm(tree), lifted.toSeq)
   }
 }

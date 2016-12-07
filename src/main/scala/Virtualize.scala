@@ -26,27 +26,24 @@ private object virtualize {
      */
     val inputs = annottees.map(_.tree).toList
     val (annottee, rest) = inputs match {
-      case (a: ValDef) :: as => {
-        c.warning(c.enclosingPosition,
-          "virtualization of parameters is not supported.")
+      case (a: ValDef) :: as if a.mods.hasFlag(Flag.PARAM) =>
+        c.warning(c.enclosingPosition, "virtualization of parameters is not supported.")
         (None, inputs)
-      }
-      case (a: TypeDef) :: as => {
-        c.warning(c.enclosingPosition,
-          "virtualization of type parameters is not supported.")
+      case (a: TypeDef) :: as =>
+        c.warning(c.enclosingPosition, "virtualization of type parameters is not supported.")
         (None, inputs)
-      }
+
       case a :: as => (Some(a), as)
       case Nil     => (None, Nil)
     }
 
     /* Virtualize the annottee. */
     val expandees = annottee match {
-      case Some(a) => transformer.virtualize(a)._1 :: rest
+      case Some(a) => transformer.virtualize(a)._1 ::: rest
       case None    => rest
     }
 
-    //c.info(c.enclosingPosition, showCode(expandees.head), true)
+    // c.info(c.enclosingPosition, showCode(expandees.head), true)
 
     c.Expr(Block(expandees, Literal(Constant(()))))
   }

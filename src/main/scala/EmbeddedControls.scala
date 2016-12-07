@@ -47,7 +47,12 @@ trait EmbeddedControls {
   def __whileDo(cond: Boolean, body: Unit): Unit = macro whileDoImpl
   def __doWhile(body: Unit, cond: Boolean): Unit = macro doWhileImpl
   def __newVar[T](init: T): T = macro newVarImpl[T]
-  def __readVar[T](init: T): T = macro readVarImpl[T] //different than LMS var!
+  def __readVar[T](init: T): T = macro readVarImpl[T] // different than LMS var! TODO: Never explicitly created!
+
+  def infix_+=[T](lhs: T, rhs: T): Unit = macro plusEqualsImpl[T]
+  def infix_-=[T](lhs: T, rhs: T): Unit = macro minusEqualsImpl[T]
+  def infix_*=[T](lhs: T, rhs: T): Unit = macro timesEqualsImpl[T]
+  def infix_/=[T](lhs: T, rhs: T): Unit = macro divEqualsImpl[T]
 //  def __lazyValDef[T](init: T): T = macro lazyValDefImpl[T]
 //  def __valDef[T](init: T): T = macro valDefImpl[T]
 
@@ -77,7 +82,7 @@ trait EmbeddedControls {
   def infix_clone(x: AnyRef): AnyRef = macro anyRef_clone
   def infix_finalize(x: AnyRef): Unit = macro anyRef_finalize
 
-  // Define universal arithmetic for all primitive types 
+  // Define universal arithmetic for all primitive types
   def infix_+[A<:AnyVal, B<:AnyVal](lhs: A, rhs: B): AnyVal = macro anyVal_+[A,B]
 
 }
@@ -91,23 +96,41 @@ private object EmbeddedControls {
 
   def ifThenElseImpl[T](c: Context)(
     cond: c.Expr[Boolean], thenBr: c.Expr[T], elseBr: c.Expr[T]): c.Expr[T] = {
-    
+
     import c.universe._
     c.Expr(q"if ($cond) $thenBr else $elseBr")
   }
 
   def returnImpl(c: Context)(expr: c.Expr[Any]): c.Expr[Nothing] = {
-
     import c.universe._
     c.Expr(q"return $expr")
   }
 
-  def assignImpl[T](c: Context)(
-    lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
-
+  def assignImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
     import c.universe._
     c.Expr(q"$lhs = $rhs")
   }
+
+  def plusEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
+    import c.universe._
+    c.Expr(q"$lhs += $rhs")
+  }
+
+  def minusEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
+    import c.universe._
+    c.Expr(q"$lhs -= $rhs")
+  }
+
+  def timesEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
+    import c.universe._
+    c.Expr(q"$lhs *= $rhs")
+  }
+
+  def divEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
+    import c.universe._
+    c.Expr(q"$lhs /= $rhs")
+  }
+
 
   def whileDoImpl(c: Context)(
     cond: c.Expr[Boolean], body: c.Expr[Unit]): c.Expr[Unit] = {
@@ -281,7 +304,7 @@ private object EmbeddedControls {
   def anyVal_+[A<:AnyVal, B<:AnyVal](c: Context)(lhs: c.Expr[A], rhs: c.Expr[B])(implicit ta: c.WeakTypeTag[A], tb: c.WeakTypeTag[B]): c.Expr[AnyVal] = {
     import c.universe._
 
-    val resultType = 
+    val resultType =
       if (weakTypeOf[A] weak_<:< weakTypeOf[B]) weakTypeOf[B]
       else if (weakTypeOf[B] weak_<:< weakTypeOf[A]) weakTypeOf[A]
       else {
