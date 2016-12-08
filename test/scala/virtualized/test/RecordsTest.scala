@@ -1,7 +1,6 @@
-package org.scala_lang.virtualized
-package annotation
+package scala.virtualized.test
 
-import org.scala_lang.virtualized.SourceContext
+import scala.virtualized._
 import org.scalatest.{ FlatSpec, ShouldMatchers }
 
 

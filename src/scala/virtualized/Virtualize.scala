@@ -1,4 +1,4 @@
-package org.scala_lang.virtualized
+package scala.virtualized
 
 import language.experimental.macros
 import scala.annotation.StaticAnnotation

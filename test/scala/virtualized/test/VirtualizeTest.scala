@@ -1,11 +1,11 @@
-package org.scala_lang.virtualized
-package annotation
+package scala.virtualized.test
 
-import org.scala_lang.virtualized.SourceContext
+import scala.virtualized._
 import org.scalatest.{ FlatSpec, ShouldMatchers }
 
 
-class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls {
+
+class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls {
 
   def __ifThenElse[T](cs: Seq[Boolean], tb: => T, eb: => T): T = {
     if (cs forall (_ == true)) tb else eb

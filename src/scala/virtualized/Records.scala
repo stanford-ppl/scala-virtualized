@@ -1,4 +1,4 @@
-package org.scala_lang.virtualized
+package scala.virtualized
 
 import scala.language.experimental.macros
 import scala.language.dynamics
@@ -161,7 +161,7 @@ class RecordMacros(val c: Context) {
       if(tpe <:< typeOf[Record]) refinedManifest(recordTypes(tpe)) else q"manifest[$tpe]"
 
     private def refinedManifest(schema: Seq[(String, Type)]): Tree = q"""
-      new _root_.org.scala_lang.virtualized.RefinedManifest[Record] {
+      new _root_.scala.virtualized.RefinedManifest[Record] {
         val fields = _root_.scala.List(..${schema.map(v => q"(${v._1}, ${tpeManifest(v._2)})")})
         def runtimeClass: Class[_] = classOf[Record]
       }

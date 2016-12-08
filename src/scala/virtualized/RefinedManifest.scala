@@ -1,4 +1,4 @@
-package org.scala_lang.virtualized
+package scala.virtualized
 
 trait RefinedManifest[T] extends Manifest[T] {
   override def canEqual(other: Any) = other match {
