@@ -65,11 +65,11 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     y should be("X VirtualizeTest.scala:62:39 ++++ Some(y) Y")
   }
 
-  // TODO: Expected behavior in this case? Should we try to backtrack to the most recent val/var?
+
   "virtualizeSourceContextMultiLine" should "be virtualized" in {
     val x =
             "X" ++++ "Z"
-    x should be("X VirtualizeTest.scala:71:17 ++++ Some(x) Z") // TODO
+    x should be("X VirtualizeTest.scala:71:17 ++++ Some(x) Z")
   }
 
   "virtualizeSourceContextOthers" should "be virtualized" in {
