@@ -11,10 +11,10 @@ trait RefinedManifest[T] extends Manifest[T] {
     * described in the header.
     */
   override def equals(that: Any): Boolean = that match {
-    case m: RefinedManifest[_] => (m canEqual this) && (this.erasure == m.erasure) && (this.fields == m.fields)
+    case m: RefinedManifest[_] => (m canEqual this) && (this.runtimeClass == m.runtimeClass) && (this.fields == m.fields)
     case _                     => false
   }
-  override def hashCode = this.erasure.##
+  override def hashCode = this.runtimeClass.##
 
   def fields: List[(String, Manifest[_])]
 }

@@ -2,7 +2,7 @@ package scala.virtualized.test
 
 import scala.virtualized._
 import org.scalatest.{ FlatSpec, ShouldMatchers }
-
+import scala.language.postfixOps
 
 
 class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls {

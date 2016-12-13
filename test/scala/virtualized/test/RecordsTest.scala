@@ -2,7 +2,7 @@ package scala.virtualized.test
 
 import scala.virtualized._
 import org.scalatest.{ FlatSpec, ShouldMatchers }
-
+import scala.language.reflectiveCalls
 
 trait RecordsTests extends FlatSpec with ShouldMatchers with RecordOps {
 

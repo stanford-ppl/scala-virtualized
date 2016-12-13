@@ -153,9 +153,9 @@ class RecordMacros(val c: Context) {
     }
 
     private def recordTypes(tpe: Type): Seq[(String, Type)] = for {
-      mem <- tpe.declarations.sorted
+      mem <- tpe.decls.sorted
       if mem.asMethod.isStable
-    } yield (mem.name.encoded, mem.asMethod.returnType)
+    } yield (mem.name.encodedName.toString, mem.asMethod.returnType)
 
     private def tpeManifest(tpe: Type): Tree =
       if(tpe <:< typeOf[Record]) refinedManifest(recordTypes(tpe)) else q"manifest[$tpe]"
