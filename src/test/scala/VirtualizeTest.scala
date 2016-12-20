@@ -94,6 +94,33 @@ class VirtualizeSpec extends FlatSpec with ShouldMatchers with EmbeddedControls 
     x should be ("X VirtualizeTest.scala:92:16 ---- Some(x) Y VirtualizeTest.scala:92:23 ++++ Some(x) Z VirtualizeTest.scala:92:30 ---- Some(x) Q")
   }
 
+  "StagedStringConcat" should "be virtualized" in {
+    case class Sym[T](value: T)
+    
+    def infix_+(x1: String, x2: Any): Sym[String] = x2 match {
+      case x2:Sym[_] => Sym(x1 + " " + x2.value)
+      case _ => Sym(x1 + x2.toString)
+    }
+    
+    @virtualize
+    def virtualizeConcatTest() = "hello" + Sym("world")
+    
+    virtualizeConcatTest() should be(Sym("hello world"))
+  }
+
+
+  "StagedImplicitStringConcat" should "be virtualized" in {
+    case class Sym[T](value: T)
+    
+    def infix_+[T:Numeric](x1: String, x2: Sym[T]): Sym[String] = {
+      Sym(x1 + " has value: " + x2.value.toString)
+    }
+    @virtualize
+    def virtualizeNumericConcatTest() = "this" + Sym(32)
+
+    virtualizeNumericConcatTest() should be (Sym("this has value: 32"))
+  }
+
 
   def infix_+(x1: String, x2: Boolean): String = "trans"
 

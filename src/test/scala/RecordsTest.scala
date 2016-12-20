@@ -89,7 +89,7 @@ class RecordsLifted extends RecordsTests {
 
   case class SimpleRecord(fields: Seq[(String, _)]) extends Record
   
-  def record_new[T: Manifest](fields: (String, Rep[_])*): Rep[T] = 
+  def record_new[T: RefinedManifest](fields: (String, Rep[_])*): Rep[T] = 
     Box(SimpleRecord(fields)).asInstanceOf[Rep[T]]
   
   def record_select[T: Manifest](record: Rep[Record], field: String): Rep[T] = 
@@ -103,7 +103,7 @@ class RecordsDirect extends RecordsTests {
 
   case class SimpleRecord(fields: Seq[(String, _)]) extends Record
 
-  def record_new[T: Manifest](fields: (String, Rep[_])*): Rep[T] = 
+  def record_new[T: RefinedManifest](fields: (String, Rep[_])*): Rep[T] = 
     SimpleRecord(fields).asInstanceOf[Rep[T]]
   
   def record_select[T: Manifest](record: Rep[Record], field: String): Rep[T] = 
