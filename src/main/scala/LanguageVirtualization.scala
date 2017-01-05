@@ -128,6 +128,10 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case Assign(lhs, rhs) =>
           liftFeature(None, "__assign", List(lhs, rhs))
 
+        // Don't rewrite +=, -=, *=, and /=. This restricts the return value to Unit
+        // in the case where the compiler/DSL author chooses to use implicit classes rather
+        // than infix_ methods
+        /*
         case Apply(Select(qualifier, TermName("$plus$eq")), List(arg)) =>     // x += y
           liftFeature(None, "infix_$plus$eq", List(qualifier, arg))
 
@@ -139,7 +143,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         case Apply(Select(qualifier, TermName("$div$eq")), List(arg)) =>      // x /= y
           liftFeature(None, "infix_$div$eq", List(qualifier, arg))
-
+        */
 
 
         // Name mangling version
