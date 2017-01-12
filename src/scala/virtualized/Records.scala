@@ -15,7 +15,7 @@ trait RecordOps {
   type Rep[+T]
   
   /* called whenever a Record is instantiated with Record (...) */
-  def record_new[T: Manifest](fields: (String, Rep[_])*): Rep[T]
+  def record_new[T: RefinedManifest](fields: (String, Rep[_])*): Rep[T]
   
   /* called whenever a Record field is accessed (r.fieldName) */
   def record_select[T: Manifest](record: Rep[Record], field: String): Rep[T]
@@ -45,7 +45,7 @@ trait RecordOps {
 
   sealed trait RecordEvidence[+T]
   implicit def ev[T <: Record]: RecordEvidence[T] = new RecordEvidence[T]{}
-  implicit def __$materializeManifest[T <: Record](implicit ev: RecordEvidence[T]): Manifest[T] =
+  implicit def __$materializeManifest[T <: Record](implicit ev: RecordEvidence[T]): RefinedManifest[T] =
     macro RecordMacros.materializeManifest[T]
 
   trait RecordAccessor[From, To] {
@@ -113,7 +113,7 @@ class RecordMacros(val c: Context) {
       val tpTree = tq"Record { ..$vals }"
       c.Expr(q"""
         record_new[$tpTree](..${tuples.map(x => q"(${x._1}, ${x._2})")})(
-            ${refinedManifest(schema)}.asInstanceOf[Manifest[$tpTree]])
+            ${refinedManifest(schema)}.asInstanceOf[_root_.scala.virtualized.RefinedManifest[$tpTree]])
       """)
     }
 
@@ -137,7 +137,8 @@ class RecordMacros(val c: Context) {
 
     def materializeManifest[A <: Record : c.WeakTypeTag](ev: Tree): Tree ={
       val tp = c.weakTypeTag[A].tpe
-      q"${refinedManifest(recordTypes(tp))}.asInstanceOf[Manifest[$tp]]"
+
+      q"${refinedManifest(recordTypes(tp))}.asInstanceOf[_root_.scala.virtualized.RefinedManifest[$tp]]"
     }
 
 

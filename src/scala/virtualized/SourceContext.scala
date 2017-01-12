@@ -93,22 +93,24 @@ private object SourceContextMacro {
     // However, we can easily get the source line and general method call location using the column number
     // We can then reparse the immediate area (stopping at parentheses, spaces, periods, semicolons) to get the method
     // Also include try-catch blocks for now just in case we somehow mess up when splicing the string
+
+    // TODO: pos.source.lineToString occassionally doesn't match up with the given column?
     val methodName = if (line > 0 && column > 0) {
-      val str = pos.source.lineToString(line-1)
-
-      var start = column-1
-      var end = column-1
-      if (isBreak(str(column-1))) start -= 1
-
-      while (start >= 0 && !isBreak(str(start))) start -= 1
-      while (end < str.length && !isBreak(str(end))) end += 1
-      if (start < 0 || isBreak(str(start))) start = start + 1
-      if (end >= str.length || isBreak(str(end))) end = end - 1
-      val tight = str.slice(start, end+1).trim
-
-      // The scala compiler MUST have had this information at some point to give us the correct column,
-      // but it seems there's no way to get it?
       try {
+        val str = pos.source.lineToString(line-1)
+
+        var start = column-1
+        var end = column-1
+        if (isBreak(str(column-1))) start -= 1
+
+        while (start >= 0 && !isBreak(str(start))) start -= 1
+        while (end < str.length && !isBreak(str(end))) end += 1
+        if (start < 0 || isBreak(str(start))) start = start + 1
+        if (end >= str.length || isBreak(str(end))) end = end - 1
+        val tight = str.slice(start, end+1).trim
+
+        // The scala compiler MUST have had this information at some point to give us the correct column,
+        // but it seems there's no way to get it?
         val tightTree = c.parse(tight)
         // c.info(c.enclosingPosition, "Tight: " + tight, true)
         // c.info(c.enclosingPosition, showRaw(tightTree), true)
@@ -150,8 +152,8 @@ private object SourceContextMacro {
 
         extractMethod(tightTree, depth-visit) // Go to the last operator for the first, and so on
       }
-      catch {case e:scala.reflect.macros.ParseException =>
-        tight
+      catch {case e:Throwable =>
+        "<unknown>"
       }
     }
     else {
