@@ -1,6 +1,6 @@
-package scala.virtualized.test
+package virtualized.test
 
-import scala.virtualized._
+import virtualized._
 import org.scalatest.{ FlatSpec, ShouldMatchers }
 import scala.language.reflectiveCalls
 
