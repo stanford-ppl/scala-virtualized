@@ -1,4 +1,4 @@
-package virtualized
+package org.virtualized
 
 import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
@@ -62,7 +62,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
   object VirtualizationTransformer {
     def apply(tree: Tree) = {
       val t = new VirtualizationTransformer().apply(tree)
-      log("(virtualized, Seq[Features]): " + t, 2)
+      log("(org.virtualized, Seq[Features]): " + t, 2)
       t
     }
   }
@@ -279,13 +279,13 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case ClassDef(mods, name, tpt, body) if mods.hasFlag(Flag.CASE) =>
           // sstucki: there are issues with the ordering of
           // virtualization and expansion of case classes (i.e. some
-          // of the expanded code might be virtualized even though it
+          // of the expanded code might be org.virtualized even though it
           // should not be and vice-versa).  So until we have decided
           // how proper virtualization of case classes should be done,
           // any attempt to do so should fail.
           // TR: not 100% sure what the issue is (although i vaguely
-          // remember that we had issues in Scala-Virtualized with
-          // auto-generated case class equality methods using virtualized
+          // remember that we had issues in Scala-org.virtualized with
+          // auto-generated case class equality methods using org.virtualized
           // equality where it shouldn't). For the moment it seems like
           // just treating case classes as regular classes works fine.
           c.warning(tree.pos, "virtualization of case classes is not fully supported.")
@@ -298,7 +298,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         // USAGE:
         // magic() //have to make an explicit call to 'execute' side effects
         // @virtualize //values could not be annotated...
-        // def magic[R]() = withTpee(Community){ //rhs pattern is matched by virtualized
+        // def magic[R]() = withTpee(Community){ //rhs pattern is matched by org.virtualized
 
         case Apply(Apply(Ident(TermName("withTpee")), List(termName)), body) =>
           val objName = TermName(termName.toString()+"Object")

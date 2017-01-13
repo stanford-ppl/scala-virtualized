@@ -1,4 +1,4 @@
-package virtualized
+package org.virtualized
 
 import scala.reflect.macros.blackbox.Context
 import language.experimental.macros

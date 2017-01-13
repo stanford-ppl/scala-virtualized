@@ -1,10 +1,13 @@
-name := "scala-virtualized"
+name := "virtualized"
 
-organization := "org.scala-lang.virtualized"
+organization := "org.org.virtualized"
 
 version := "0.1"
 
 scalaVersion := "2.11.2"
+
+scalaSource in Compile <<= baseDirectory(_/ "src")
+scalaSource in Test <<= baseDirectory(_/"test")
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.2" % "test"
 

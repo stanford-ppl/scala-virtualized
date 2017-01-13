@@ -1,6 +1,6 @@
-package virtualized.test
+package org.virtualized.test
 
-import virtualized._
+import org.virtualized._
 import org.scalatest.{ FlatSpec, ShouldMatchers }
 import scala.language.postfixOps
 
@@ -19,7 +19,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     (x1 zip x2) forall (p => p._1 == p._2)
   }
 
-  "virtualizeSourceContext" should "be virtualized" in {
+  "virtualizeSourceContext" should "be org.virtualized" in {
     implicit class OpsCls(lhs: Boolean){
       def op(rhs: Boolean)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
     }
@@ -33,7 +33,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeContext() should be("VirtualizeTest.scala:28:22 op Some(foo)")
   }
 
-  "virtualizeSourceContextNested" should "be virtualized" in {
+  "virtualizeSourceContextNested" should "be org.virtualized" in {
 
     def a()(implicit pos: SourceContext) = b()
     def b()(implicit pos: SourceContext) = c()
@@ -53,12 +53,12 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     def method(x: String, y: String)(implicit pos: SourceContext) = pos.toString + " " + pos.methodName + " " + pos.assignedVariable
   }
 
-  "virtualizeSourceContextSequential" should "be virtualized" in {
+  "virtualizeSourceContextSequential" should "be org.virtualized" in {
     val x = "X" ++++ "Y" ++++ "Z"
     x should be("X VirtualizeTest.scala:57:17 ++++ Some(x) Y VirtualizeTest.scala:57:26 ++++ Some(x) Z")
   }
 
-  "virtualizeSourceContextMultiDef" should "be virtualized" in {
+  "virtualizeSourceContextMultiDef" should "be org.virtualized" in {
     val x = "X" ++++ "Y"; val y = "X" ++++ "Y"
 
     x should be("X VirtualizeTest.scala:62:17 ++++ Some(x) Y")
@@ -66,13 +66,13 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
 
-  "virtualizeSourceContextMultiLine" should "be virtualized" in {
+  "virtualizeSourceContextMultiLine" should "be org.virtualized" in {
     val x =
             "X" ++++ "Z"
     x should be("X VirtualizeTest.scala:71:17 ++++ Some(x) Z")
   }
 
-  "virtualizeSourceContextOthers" should "be virtualized" in {
+  "virtualizeSourceContextOthers" should "be org.virtualized" in {
     var q = "HELLO".infix
     var z = "HELLO".method("WORLD", "!")
     var x = !q
@@ -88,13 +88,13 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     y should be ("VirtualizeTest.scala:81:17 ? Some(y)")
   }
 
-  "virtualizeSourceContextMultiOp" should "be virtualized" in {
+  "virtualizeSourceContextMultiOp" should "be org.virtualized" in {
     val x = "X"----"Y"++++"Z"----"Q"
 
     x should be ("X VirtualizeTest.scala:92:16 ---- Some(x) Y VirtualizeTest.scala:92:23 ++++ Some(x) Z VirtualizeTest.scala:92:30 ---- Some(x) Q")
   }
 
-  "StagedStringConcat" should "be virtualized" in {
+  "StagedStringConcat" should "be org.virtualized" in {
     case class Sym[T](value: T)
     
     def infix_+(x1: String, x2: Any): Sym[String] = x2 match {
@@ -109,7 +109,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
 
-  "StagedImplicitStringConcat" should "be virtualized" in {
+  "StagedImplicitStringConcat" should "be org.virtualized" in {
     case class Sym[T](value: T)
     
     def infix_+[T:Numeric](x1: String, x2: Sym[T]): Sym[String] = {
@@ -124,7 +124,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
   def infix_+(x1: String, x2: Boolean): String = "trans"
 
-  "StringConcat" should "be virtualized" in {
+  "StringConcat" should "be org.virtualized" in {
 
     @virtualize
     def virtualizeIfTest() = "wefjbh" + true + "" + 6
@@ -132,7 +132,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeIfTest() should be("trans6")
   }
 
-  "StringCaseClassConcat" should "be virtualized" in {
+  "StringCaseClassConcat" should "be org.virtualized" in {
 
     @virtualize
     def m = {
@@ -144,7 +144,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeIfTest() should be("trans")
   }
 
-  "method virtualizeIfTest" should "be virtualized" in {
+  "method virtualizeIfTest" should "be org.virtualized" in {
     def m[T:Manifest](x: T) = manifest[T]
 
     @virtualize
@@ -162,7 +162,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     m(virtualizeSuperTypeIfTest(true, false)) shouldBe manifest[Object with java.io.Serializable]
   }
 
-  "object VirtualizeIfTest" should "be virtualized" in {
+  "object VirtualizeIfTest" should "be org.virtualized" in {
 
     @virtualize
     object VirtualizeIfTest {
@@ -173,7 +173,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     VirtualizeIfTest(true, true) should be("yep")
   }
 
-  "VirtualizeIfTraitTest" should "be virtualized" in {
+  "VirtualizeIfTraitTest" should "be org.virtualized" in {
 
     @virtualize
     trait VirtualizeIfTrait {
@@ -186,7 +186,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     VirtualizeIfTraitTest(true, true) should be("yep")
   }
 
-  "VirtualizeIfTrait2Test" should "be virtualized" in {
+  "VirtualizeIfTrait2Test" should "be org.virtualized" in {
 
     trait IfListInt {
       def __ifThenElse[T](cs: Seq[Int], tb: => T, eb: => T): T = {
@@ -206,7 +206,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   // Should use default `__ifThenElse` from EmbeddedControls.
-  "defaultIfTest" should "be virtualized" in {
+  "defaultIfTest" should "be org.virtualized" in {
 
     @virtualize
     def defaultIfTest(c: Boolean) = if (c) "yep" else {
@@ -225,8 +225,8 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
   }
 
-  // Should use inner virtualized `__ifThenElse`
-  "virtualizeInnerIfTest" should "be virtualized" in {
+  // Should use inner org.virtualized `__ifThenElse`
+  "virtualizeInnerIfTest" should "be org.virtualized" in {
 
     // This overrides the `__ifThenElse` in `EmbeddedControls`
     def __ifThenElse[T](c: Boolean, thenBr: => T, elseBr: => T): T =
@@ -239,7 +239,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeInnerIfTest(true) should be("nope")
   }
 
-  "virtualizeThenOnlyTest" should "be virtualized" in {
+  "virtualizeThenOnlyTest" should "be org.virtualized" in {
     def __ifThenElse[T](c: Boolean, thenBr: => T, elseBr: => T): T = if (!c) thenBr else elseBr
 
     var x = 3
@@ -254,7 +254,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     test() shouldBe 5
   }
 
-  "virtualizeWhileDo" should "be virtualized" in {
+  "virtualizeWhileDo" should "be org.virtualized" in {
     def __whileDo(cond: Seq[Boolean], body: => String): String = if (cond forall (_ == true)) body else "nope"
 
     @virtualize
@@ -274,7 +274,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   def infix_*=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 3
   def infix_/=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 4
 
-  "virtualizeClassFieldTest" should "be virtualized" in {
+  "virtualizeClassFieldTest" should "be org.virtualized" in {
     def __ifThenElse[T](c: Boolean, thenBr: => T, elseBr: => T): T = if (!c) thenBr else elseBr
 
     @virtualize
@@ -291,7 +291,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
 
-  "virtualizeVariables" should "be virtualized" in {
+  "virtualizeVariables" should "be org.virtualized" in {
     @virtualize
     def virtualizeVariablesTest(): Int = {
       var x = 5 // x = 6
@@ -302,7 +302,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeVariablesTest() shouldBe 9
   }
 
-  "virtualizePlusEquals" should "be virtualized" in {
+  "virtualizePlusEquals" should "be org.virtualized" in {
     @virtualize
     var x = 5
 
@@ -317,7 +317,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     test() shouldBe 28
   }
 
-  "virtualizeVariables2" should "not be virtualized" in {
+  "virtualizeVariables2" should "not be org.virtualized" in {
     var x = 5
 
     @virtualize
@@ -328,7 +328,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeVariablesTest() shouldBe 3
   }
 
-  "virtualizeVariables3" should "be virtualized" in {
+  "virtualizeVariables3" should "be org.virtualized" in {
     @virtualize
     var x = 5
 
@@ -341,7 +341,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   // Not supported
-  "virtualizeVariables4" should "be virtualized" in {
+  "virtualizeVariables4" should "be org.virtualized" in {
     var x = 5
 
     @virtualize
@@ -369,7 +369,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     "val e: Int = infix_+(3, 5.0)" shouldNot compile
   }
 
-  "virtualizeAnyMethods" should "be virtualized" in {
+  "virtualizeAnyMethods" should "be org.virtualized" in {
     def infix_==(x1: List[Int], x2: List[Int]) = Nil
     def infix_!=(x1: List[Int], x2: List[Int]) = Nil
     def infix_##(x: List[Int]) = Nil
@@ -401,7 +401,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   def infix_wait(x: List[Int], timeout: Long): List[Int] = Nil
   def infix_wait(x: List[Int], timeout: Long, nanos: Int): List[Int] = Nil
 
-  "virtualizeAnyRefMethods" should "be virtualized" in {
+  "virtualizeAnyRefMethods" should "be org.virtualized" in {
     def infix_eq(x1: List[Int], x2: List[Int]) = Nil
     def infix_ne(x1: List[Int], x2: List[Int]) = Nil
     def infix_notify(x: List[Int]) = Nil
@@ -427,32 +427,32 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeAnyRefTest(List(1,2,3), List(4,5,6)) shouldBe List(1,1)
   }
 
-  "numericPlusTest" should "not be virtualized" in {
+  "numericPlusTest" should "not be org.virtualized" in {
     def numericPlusTest(a: Int, b: Int): Int = a+b
     numericPlusTest(1, 2) should be(3)
   }
 
-  "virtualizePlusTest" should "be virtualized" in {
-    def infix_+(a1: Any, a2: Any) = a2.toString + a1 //+ on Any is not virtualized!
+  "virtualizePlusTest" should "be org.virtualized" in {
+    def infix_+(a1: Any, a2: Any) = a2.toString + a1 //+ on Any is not org.virtualized!
     @virtualize
-    def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "StringLiteral"+b will be virtualized!
+    def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "StringLiteral"+b will be org.virtualized!
     virtualizePlusTest("you", List(false)) should be("youList(false)")
   }
 
-  "virtualizeAnyPlusTest" should "not be virtualized" in {
+  "virtualizeAnyPlusTest" should "not be org.virtualized" in {
     @virtualize
-    def virtualizePlusTest(a: Any, b: List[Boolean]) = a.toString + b //only "literal"+b will be virtualized!
+    def virtualizePlusTest(a: Any, b: List[Boolean]) = a.toString + b //only "literal"+b will be org.virtualized!
     virtualizePlusTest("you", List(false)) should be("youList(false)")
   }
 
-  "virtualizePlusTestStringLiteral" should "be virtualized" in {
+  "virtualizePlusTestStringLiteral" should "be org.virtualized" in {
     def infix_+(s: String, a: Any) = a.toString + s //no need to overwrite?
     @virtualize
     def virtualizePlusTest(a: Any) = "test" + a
     virtualizePlusTest(List(false)) should be("List(false)test") //check that call is actually intercepted
   }
 
-  "method virtualizeEqualsTest" should "be virtualized" in {
+  "method virtualizeEqualsTest" should "be org.virtualized" in {
 
     @virtualize
     def virtualizeEqualsTest(a: List[Boolean], b: List[Boolean]) = a == b
@@ -462,7 +462,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     (List(true, true) == List(true, true, false)) should be(false)
   }
 
-  "object VirtualizeEqualsTest" should "be virtualized" in {
+  "object VirtualizeEqualsTest" should "be org.virtualized" in {
 
     @virtualize
     object VirtualizeEqualsTest {
@@ -475,7 +475,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   }
 
   // Should use default `Any.==` method from EmbeddedControls.
-  "defaultEqualsTest" should "be virtualized" in {
+  "defaultEqualsTest" should "be org.virtualized" in {
 
     @virtualize
     def defaultEqualsTest(a: Boolean, b: Boolean) = a == b
@@ -484,7 +484,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     defaultEqualsTest(true, true) should be(true)
   }
 
-  "guardEqualsTest" should "be virtualized" in {
+  "guardEqualsTest" should "be org.virtualized" in {
     def guardEqualsSanityTest(xs: List[Boolean], ys: List[Boolean]) = (xs,ys) match {
       case (x::xs, y::ys) if infix_==(xs,ys) => true
       case _ => false
@@ -499,7 +499,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     guardEqualsTest(List(false, true, false), List(true, true)) should be(true)
   }
 
-  "parameter of virtualizeParamTest" should "not be virtualized" in {
+  "parameter of virtualizeParamTest" should "not be org.virtualized" in {
 
     val c = false
     def virtualizeParamTest(
@@ -508,14 +508,14 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeParamTest() should be("nope")
   }
 
-  "type parameter of virtualizeTParamTest" should "not be virtualized" in {
+  "type parameter of virtualizeTParamTest" should "not be org.virtualized" in {
 
     def virtualizeTParamTest[@virtualize T](s: T) = s
 
     virtualizeTParamTest("nope") should be("nope")
   }
 
-  "try expression in virtualizeTryTest" should "not be virtualized" in {
+  "try expression in virtualizeTryTest" should "not be org.virtualized" in {
 
     @virtualize
     def virtualizeTryTest[T](s: => T) = try s catch { case _:Exception => "hello" }
@@ -523,7 +523,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeTryTest("nope") should be("nope")
   }
 
-  "throw expression in virtualizeThrowTest" should "not be virtualized" in {
+  "throw expression in virtualizeThrowTest" should "not be org.virtualized" in {
 
     case class MyException(msg: String) extends Exception
 
@@ -537,7 +537,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     }
   }
 
-  "isInstanceOf and asInstanceOf" should "not be virtualized" in {
+  "isInstanceOf and asInstanceOf" should "not be org.virtualized" in {
     @virtualize
     def virtualizeInstanceOf(o: Object) = if (o.isInstanceOf[String]) o.asInstanceOf[String] else null
     virtualizeInstanceOf("hello") should be("hello")

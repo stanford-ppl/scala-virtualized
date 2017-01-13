@@ -1,4 +1,4 @@
-package virtualized
+package org.virtualized
 
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox.Context //FIXME: should be whitebox

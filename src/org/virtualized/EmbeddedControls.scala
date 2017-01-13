@@ -1,13 +1,13 @@
-package virtualized
+package org.virtualized
 
 import language.experimental.macros
 import scala.reflect.macros.whitebox.Context
 
 /**
- * Default implementation of virtualized Scala control structures.
+ * Default implementation of org.virtualized Scala control structures.
  *
  * This trait is adapted from the `EmbeddedControls` trait in
- * Scala Virtualized.  See also
+ * Scala org.virtualized.  See also
  * [[https://raw.github.com/namin/scala/topic-virt/src/library/scala/EmbeddedControls.scala]]
  *
  * The `EmbeddedControls` trait provides method definitions where
@@ -16,7 +16,7 @@ import scala.reflect.macros.whitebox.Context
  * DSLs a chance to provide their own definitions and thereby override
  * the standard interpretation of the compiler.
  *
- * Example: When faced with an `if` construct, the `@virtualized`
+ * Example: When faced with an `if` construct, the `@org.virtualized`
  * macro annotation will generate a method call:
  * `__ifThenElse(cond, thenp, elsep)`
  *
