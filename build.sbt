@@ -1,6 +1,6 @@
 name := "virtualized"
 
-organization := "org.org.virtualized"
+organization := "org.virtualized"
 
 version := "0.1"
 

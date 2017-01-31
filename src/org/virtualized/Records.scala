@@ -10,10 +10,10 @@ abstract class Record
 /* This is the trait that should be mixed in to enable macro Records */
 trait RecordOps {
 
-  // The current implementation of Record lifting relies on the Rep[T] abstraction 
-  // Lifting Records in a front-end without Reps will require a new implementation 
+  // The current implementation of Record lifting relies on the Rep[T] abstraction
+  // Lifting Records in a front-end without Reps will require a new implementation
   type Rep[+T]
-  
+
   /* called whenever a Record is instantiated with Record (...) */
   def record_new[T: RefinedManifest](fields: (String, Rep[_])*): Rep[T]
   
