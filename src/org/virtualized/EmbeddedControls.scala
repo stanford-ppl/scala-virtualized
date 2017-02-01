@@ -49,10 +49,6 @@ trait EmbeddedControls {
   def __newVar[T](init: T): T = macro newVarImpl[T]
   def __readVar[T](init: T): T = macro readVarImpl[T] // different than LMS var! TODO: Never explicitly created!
 
-  def infix_+=[T](lhs: T, rhs: T): Unit = macro plusEqualsImpl[T]
-  def infix_-=[T](lhs: T, rhs: T): Unit = macro minusEqualsImpl[T]
-  def infix_*=[T](lhs: T, rhs: T): Unit = macro timesEqualsImpl[T]
-  def infix_/=[T](lhs: T, rhs: T): Unit = macro divEqualsImpl[T]
 //  def __lazyValDef[T](init: T): T = macro lazyValDefImpl[T]
 //  def __valDef[T](init: T): T = macro valDefImpl[T]
 
@@ -110,27 +106,6 @@ private object EmbeddedControls {
     import c.universe._
     c.Expr(q"$lhs = $rhs")
   }
-
-  def plusEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
-    import c.universe._
-    c.Expr(q"$lhs += $rhs")
-  }
-
-  def minusEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
-    import c.universe._
-    c.Expr(q"$lhs -= $rhs")
-  }
-
-  def timesEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
-    import c.universe._
-    c.Expr(q"$lhs *= $rhs")
-  }
-
-  def divEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
-    import c.universe._
-    c.Expr(q"$lhs /= $rhs")
-  }
-
 
   def whileDoImpl(c: Context)(
     cond: c.Expr[Boolean], body: c.Expr[Unit]): c.Expr[Unit] = {
