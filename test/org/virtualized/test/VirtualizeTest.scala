@@ -269,12 +269,8 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
   implicit def __readVar(lhs: Var[Int]): Int = lhs.x
 
-  def infix_+=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 1
-  def infix_-=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 2
-  def infix_*=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 3
-  def infix_/=(lhs: Var[Int], rhs: Int): Unit = lhs.x += rhs + 4
 
-  "virtualizeClassFieldTest" should "be org.virtualized" in {
+  "virtualizeClassFieldTest" should "be virtualized" in {
     def __ifThenElse[T](c: Boolean, thenBr: => T, elseBr: => T): T = if (!c) thenBr else elseBr
 
     @virtualize
@@ -302,7 +298,14 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     virtualizeVariablesTest() shouldBe 9
   }
 
-  "virtualizePlusEquals" should "be org.virtualized" in {
+  "virtualizePlusEquals" should "be virtualized" in {
+    implicit class VarOps(lhs: Var[Int]) {
+      def +=(rhs: Int): Unit = lhs.x += rhs + 1
+      def -=(rhs: Int): Unit = lhs.x += rhs + 2
+      def *=(rhs: Int): Unit = lhs.x += rhs + 3
+      def /=(rhs: Int): Unit = lhs.x += rhs + 4
+    }
+
     @virtualize
     var x = 5
 
@@ -317,7 +320,31 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
     test() shouldBe 28
   }
 
-  "virtualizeVariables2" should "not be org.virtualized" in {
+
+  "virtualizeImplicitPlusEquals" should "be virtualized" in {
+    implicit class VarOps(lhs: Var[Int]) {
+      def +=(rhs: Int): String = {
+        println("hello!")
+        lhs.x + " += " + rhs
+      }
+    }
+    @virtualize
+    var x = 3
+
+    @virtualize
+    def test() = x += 5
+
+    @virtualize
+    def get(): Int = x
+
+    get() shouldBe 4
+    test() //shouldBe "4 += 5"
+    get() shouldBe 4
+
+    println(x)
+  }
+
+  "virtualizeVariables2" should "not be virtualized" in {
     var x = 5
 
     @virtualize
@@ -578,3 +605,26 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
   // }
 
 }
+
+
+
+class VirtualizeVarsSpec extends FlatSpec with ShouldMatchers with EmbeddedControls {
+  "virtualizePlusEquals" should "be virtualized" in {
+    case class Var[T](var x: T)
+    def __newVar(init: Int): Var[Int] = Var(init + 1)
+    def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
+    implicit def __readVar(lhs: Var[Int]): Int = lhs.x
+
+    implicit class VarOps(lhs: Var[Int]) {
+      def +=(rhs: Int): String = s"${lhs.x} += $rhs"
+    }
+
+    @virtualize
+    def test() = {
+      var x = 0
+      x += 1
+    }
+    test() shouldBe "1 += 1"
+  }
+}
+
