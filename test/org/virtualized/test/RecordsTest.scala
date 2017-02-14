@@ -1,10 +1,10 @@
 package org.virtualized.test
 
 import org.virtualized._
-import org.scalatest.{ FlatSpec, ShouldMatchers }
+import org.scalatest.{ FlatSpec, Matchers }
 import scala.language.reflectiveCalls
 
-trait RecordsTests extends FlatSpec with ShouldMatchers with RecordOps {
+trait RecordsTests extends FlatSpec with Matchers with RecordOps {
 
   implicit def unit[T](x: T): Rep[T]
 
@@ -95,8 +95,10 @@ class RecordsLifted extends RecordsTests {
     record.x.asInstanceOf[SimpleRecord].fields.find(_._1 == field).get._2.asInstanceOf[Rep[T]]
 }
 
-class RecordsDirect extends RecordsTests {
-  type Rep[+T] = T
+
+// Known scalac 2.12 bug SI-10140
+trait Lib extends RecordsTests { type Rep[+T] = T }
+class RecordsDirect extends Lib {
 
   def unit[T](x: T) = x
 

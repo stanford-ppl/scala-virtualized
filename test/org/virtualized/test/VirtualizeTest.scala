@@ -1,11 +1,11 @@
 package org.virtualized.test
 
 import org.virtualized._
-import org.scalatest.{ FlatSpec, ShouldMatchers }
+import org.scalatest.{ FlatSpec, Matchers }
 import scala.language.postfixOps
 
 
-class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls {
+class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
 
   def __ifThenElse[T](cs: Seq[Boolean], tb: => T, eb: => T): T = {
     if (cs forall (_ == true)) tb else eb
@@ -608,7 +608,7 @@ class VirtualizeTest extends FlatSpec with ShouldMatchers with EmbeddedControls 
 
 
 
-class VirtualizeVarsSpec extends FlatSpec with ShouldMatchers with EmbeddedControls {
+class VirtualizeVarsSpec extends FlatSpec with Matchers with EmbeddedControls {
   "virtualizePlusEquals" should "be virtualized" in {
     case class Var[T](var x: T)
     def __newVar(init: Int): Var[Int] = Var(init + 1)
