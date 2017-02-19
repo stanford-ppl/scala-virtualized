@@ -128,11 +128,13 @@ class RecordMacros(val c: Context) {
             ${tpeManifest(x.returnType)}.asInstanceOf[Manifest[${x.returnType}]])
       """}
 
-      q"""new RecordAccessor[Rep[${weakTypeOf[A]}],{..$dstTpeMembers}]{
+      val accessor = q"""new RecordAccessor[Rep[${weakTypeOf[A]}],{..$dstTpeMembers}]{
         def apply(rec: Rep[${weakTypeOf[A]}]): {..$dstTpeMembers} = new {
           ..$dstMembers
         }
       }"""
+      c.info(c.enclosingPosition, showCode(accessor), true)
+      accessor
     }
 
     def materializeManifest[A <: Record : c.WeakTypeTag](ev: Tree): Tree ={
