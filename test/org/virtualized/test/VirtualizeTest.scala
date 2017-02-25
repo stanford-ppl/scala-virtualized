@@ -11,13 +11,8 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     if (cs forall (_ == true)) tb else eb
   }
 
-  def infix_+[T](x1: List[T], x2: Any): String = {
-    x1.toString+"+"+x2.toString
-  }
 
-  def infix_==[T](x1: List[T], x2: List[T]): Boolean = {
-    (x1 zip x2) forall (p => p._1 == p._2)
-  }
+
 
   "virtualizeSourceContext" should "be org.virtualized" in {
     implicit class OpsCls(lhs: Boolean){
@@ -30,7 +25,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     }
 
     //Careful, these tests depend on the line numbers they are written on!!
-    virtualizeContext() should be("VirtualizeTest.scala:28:22 op Some(foo)")
+    virtualizeContext() should be("VirtualizeTest.scala:23:22 op Some(foo)")
   }
 
   "virtualizeSourceContextNested" should "be org.virtualized" in {
@@ -42,7 +37,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     //SourceContext macro should only be applied at the highest level
     //Afterwards the implicit parameter should be passed down the forwarding calls
     def virtualizeContext() = a()
-    virtualizeContext() should be("VirtualizeTest.scala:44:32 a None")
+    virtualizeContext() should be("VirtualizeTest.scala:39:32 a None")
   }
   implicit class OpsCls(lhs: String) {
     def ++++(rhs: String)(implicit pos: SourceContext) = lhs + " " + pos.toString + " " + pos.methodName + " " + pos.assignedVariable + " " + rhs
@@ -55,21 +50,21 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
 
   "virtualizeSourceContextSequential" should "be org.virtualized" in {
     val x = "X" ++++ "Y" ++++ "Z"
-    x should be("X VirtualizeTest.scala:57:17 ++++ Some(x) Y VirtualizeTest.scala:57:26 ++++ Some(x) Z")
+    x should be("X VirtualizeTest.scala:52:17 ++++ Some(x) Y VirtualizeTest.scala:52:26 ++++ Some(x) Z")
   }
 
   "virtualizeSourceContextMultiDef" should "be org.virtualized" in {
     val x = "X" ++++ "Y"; val y = "X" ++++ "Y"
 
-    x should be("X VirtualizeTest.scala:62:17 ++++ Some(x) Y")
-    y should be("X VirtualizeTest.scala:62:39 ++++ Some(y) Y")
+    x should be("X VirtualizeTest.scala:57:17 ++++ Some(x) Y")
+    y should be("X VirtualizeTest.scala:57:39 ++++ Some(y) Y")
   }
 
 
   "virtualizeSourceContextMultiLine" should "be org.virtualized" in {
     val x =
             "X" ++++ "Z"
-    x should be("X VirtualizeTest.scala:71:17 ++++ Some(x) Z")
+    x should be("X VirtualizeTest.scala:66:17 ++++ Some(x) Z")
   }
 
   "virtualizeSourceContextOthers" should "be org.virtualized" in {
@@ -80,23 +75,23 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     var w = "X"++++"Y"
     var y = "32"?
 
-    q should be ("VirtualizeTest.scala:76:21 infix Some(q)")    // Method calls without parentheses - col is at start of term
-    z should be ("VirtualizeTest.scala:77:27 method Some(z)")   // Method calls with parentheses - col is at opening paren
-    x should be ("VirtualizeTest.scala:78:13 unary_! Some(x)")
-    m should be ("VirtualizeTest.scala:79:13 unary_! Some(m) VirtualizeTest.scala:79:16 ++++ Some(m) VirtualizeTest.scala:79:21 unary_! Some(m)")
-    w should be ("X VirtualizeTest.scala:80:16 ++++ Some(w) Y")
-    y should be ("VirtualizeTest.scala:81:17 ? Some(y)")
+    q should be ("VirtualizeTest.scala:71:21 infix Some(q)")    // Method calls without parentheses - col is at start of term
+    z should be ("VirtualizeTest.scala:72:27 method Some(z)")   // Method calls with parentheses - col is at opening paren
+    x should be ("VirtualizeTest.scala:73:13 unary_! Some(x)")
+    m should be ("VirtualizeTest.scala:74:13 unary_! Some(m) VirtualizeTest.scala:74:16 ++++ Some(m) VirtualizeTest.scala:74:21 unary_! Some(m)")
+    w should be ("X VirtualizeTest.scala:75:16 ++++ Some(w) Y")
+    y should be ("VirtualizeTest.scala:76:17 ? Some(y)")
   }
 
   "virtualizeSourceContextMultiOp" should "be org.virtualized" in {
     val x = "X"----"Y"++++"Z"----"Q"
 
-    x should be ("X VirtualizeTest.scala:92:16 ---- Some(x) Y VirtualizeTest.scala:92:23 ++++ Some(x) Z VirtualizeTest.scala:92:30 ---- Some(x) Q")
+    x should be ("X VirtualizeTest.scala:87:16 ---- Some(x) Y VirtualizeTest.scala:87:23 ++++ Some(x) Z VirtualizeTest.scala:87:30 ---- Some(x) Q")
   }
-
+  /*
   "StagedStringConcat" should "be org.virtualized" in {
     case class Sym[T](value: T)
-    
+
     def infix_+(x1: String, x2: Any): Sym[String] = x2 match {
       case x2:Sym[_] => Sym(x1 + " " + x2.value)
       case _ => Sym(x1 + x2.toString)
@@ -131,8 +126,10 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
 
     virtualizeIfTest() should be("trans6")
   }
-
+  */
+  /*
   "StringCaseClassConcat" should "be org.virtualized" in {
+
 
     @virtualize
     def m = {
@@ -143,6 +140,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
 
     virtualizeIfTest() should be("trans")
   }
+  */
 
   "method virtualizeIfTest" should "be org.virtualized" in {
     def m[T:Manifest](x: T) = manifest[T]
@@ -387,7 +385,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     virtualizeVariablesTest1() shouldBe 9
     virtualizeVariablesTest2() shouldBe 3
   }
-
+/*
   "primitiveArithmetic" should "have the right result type" in {
     "val a: Double = infix_+(3, 5.0)" should compile
     "val b: Long = infix_+(3, 5l)" should compile
@@ -395,7 +393,8 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     "val d: Double = infix_+(5.0, 5f)" should compile
     "val e: Int = infix_+(3, 5.0)" shouldNot compile
   }
-
+  */
+  /*
   "virtualizeAnyMethods" should "be org.virtualized" in {
     def infix_==(x1: List[Int], x2: List[Int]) = Nil
     def infix_!=(x1: List[Int], x2: List[Int]) = Nil
@@ -453,25 +452,25 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
 
     virtualizeAnyRefTest(List(1,2,3), List(4,5,6)) shouldBe List(1,1)
   }
-
+  */
   "numericPlusTest" should "not be org.virtualized" in {
     def numericPlusTest(a: Int, b: Int): Int = a+b
     numericPlusTest(1, 2) should be(3)
   }
-
+  /*
   "virtualizePlusTest" should "be org.virtualized" in {
     def infix_+(a1: Any, a2: Any) = a2.toString + a1 //+ on Any is not org.virtualized!
     @virtualize
     def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "StringLiteral"+b will be org.virtualized!
     virtualizePlusTest("you", List(false)) should be("youList(false)")
   }
-
+  */
   "virtualizeAnyPlusTest" should "not be org.virtualized" in {
     @virtualize
     def virtualizePlusTest(a: Any, b: List[Boolean]) = a.toString + b //only "literal"+b will be org.virtualized!
     virtualizePlusTest("you", List(false)) should be("youList(false)")
   }
-
+/*
   "virtualizePlusTestStringLiteral" should "be org.virtualized" in {
     def infix_+(s: String, a: Any) = a.toString + s //no need to overwrite?
     @virtualize
@@ -512,36 +511,40 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
   }
 
   "guardEqualsTest" should "be org.virtualized" in {
+    /*
     def guardEqualsSanityTest(xs: List[Boolean], ys: List[Boolean]) = (xs,ys) match {
       case (x::xs, y::ys) if infix_==(xs,ys) => true
       case _ => false
     }
-
+  */
     @virtualize
     def guardEqualsTest(xs: List[Boolean], ys: List[Boolean]) = (xs,ys) match {
       case (x::xs, y::ys) if xs==ys => true
       case _ => false
     }
-    guardEqualsSanityTest(List(false, true, false), List(true, true)) should be(true)
+    //guardEqualsSanityTest(List(false, true, false), List(true, true)) should be(true)
     guardEqualsTest(List(false, true, false), List(true, true)) should be(true)
   }
 
+*/
   "parameter of virtualizeParamTest" should "not be org.virtualized" in {
 
     val c = false
+    @virtualize
     def virtualizeParamTest(
-      @virtualize s: String = if (c) "yep" else "nope") = s
+       s: String = if (c) "yep" else "nope") = s
 
     virtualizeParamTest() should be("nope")
   }
 
+/*
   "type parameter of virtualizeTParamTest" should "not be org.virtualized" in {
 
     def virtualizeTParamTest[@virtualize T](s: T) = s
 
     virtualizeTParamTest("nope") should be("nope")
   }
-
+*/
   "try expression in virtualizeTryTest" should "not be org.virtualized" in {
 
     @virtualize
@@ -570,7 +573,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     virtualizeInstanceOf("hello") should be("hello")
     virtualizeInstanceOf(Nil) should be(null)
   }
-
+/*
   "Scopes" should "be generated" in {
     case class MyCls[T](i:T)
     trait Ops {
@@ -594,7 +597,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
       result should be (5)
     }
   }
-
+*/
   // "withTpe" should "crash in this case" in {
   //   //have to make an explicit call to 'execute' side effects
   //    //values could not be annotated...

@@ -1,9 +1,9 @@
 package org.virtualized
 
-import scala.language.experimental.macros
-import scala.reflect.macros.blackbox.Context //FIXME: should be whitebox
-import scala.annotation.StaticAnnotation
 
+import scala.annotation.StaticAnnotation
+import scala.meta._
+import scala.meta.contrib._
 /**
   * These helper annotations should provide help to generate the type and RefinedManifest of a record when being used
   *
@@ -27,6 +27,23 @@ import scala.annotation.StaticAnnotation
   * )
   */
 
+
+class mRecord extends StaticAnnotation {
+  inline def apply(defn: Any): Any = meta {
+    defn match {
+      case cc@Defn.Class(mods, name, _, ctor, _) if mods.exists(_.equal[Structurally](mod"case")) =>
+        val members = ctor.paramss(0)
+     //   val typeMembers = members.map(param => q"${param.name}")
+        val typ: Stat = q"type $name"
+        //Term.Block(collection.immutable.Seq(typ,cc))
+        cc
+      case _ =>
+        abort("mRecord should be applied to a case class !" + defn.structure.toString)
+    }
+  }
+}
+
+/*
 /** Annotation class for @mRecord macro annotation. */
 final class mRecord extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro virtualizeRecord.impl
@@ -85,3 +102,4 @@ object virtualizeRecord {
     }
   }
 }
+*/

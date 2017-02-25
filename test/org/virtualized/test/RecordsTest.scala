@@ -3,7 +3,7 @@ package org.virtualized.test
 import org.virtualized._
 import org.scalatest.{ FlatSpec, Matchers }
 import scala.language.reflectiveCalls
-
+/*
 trait RecordsTests extends FlatSpec with Matchers with RecordOps {
 
   implicit def unit[T](x: T): Rep[T]
@@ -26,7 +26,7 @@ trait RecordsTests extends FlatSpec with Matchers with RecordOps {
   def named() = {
     @mRecord case class Person(name: String, age: Int, height: Double)
     val person = Person("Hans", 7, 5.5)
-    app(person)
+    //app(person)
   }
 
   def app(person: Rep[Person]) = {
@@ -110,3 +110,4 @@ class RecordsDirect extends Lib {
   def record_select[T: Manifest](record: Rep[Record], field: String): Rep[T] = 
     record.asInstanceOf[SimpleRecord].fields.find(_._1 == field).get._2.asInstanceOf[Rep[T]]
 }
+*/
