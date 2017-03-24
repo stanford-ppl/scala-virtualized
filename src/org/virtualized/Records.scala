@@ -1,9 +1,10 @@
 package org.virtualized
 
+
+
 import scala.language.experimental.macros
 import scala.language.dynamics
 import scala.reflect.macros.whitebox.Context
-
 /* Common superclass of all user-defined records, macro generates structural refinements on this type */
 abstract class Record
 
