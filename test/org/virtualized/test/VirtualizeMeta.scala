@@ -63,5 +63,13 @@ object Prog2 extends EmbeddedControls{
   }
 }
 
+trait StageAny[A]
+trait Staged[A]
+
+@stageany
+object Prog3 {
+  def test[A:StageAny]: Unit = ???
+}
+
 
 

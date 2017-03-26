@@ -55,11 +55,11 @@ trait EmbeddedControls {
 
   // Control structures
   def __ifThenElse[T](cond: Boolean, thenBr: T, elseBr: T): T = macro ifThenElseImpl[T]
-  def __return(expr: Any): Nothing = macro returnImpl
-  def __assign[T](lhs: T, rhs: T): Unit = macro assignImpl[T]
-  def __assign[T](lhs: Cell[T], rhs: T): Unit = lhs.write(rhs)
-  def __whileDo(cond: Boolean, body: Unit): Unit = macro whileDoImpl
-  def __doWhile(body: Unit, cond: Boolean): Unit = macro doWhileImpl
+  def __return(expr: Any): Any = macro returnImpl
+  def __assign[T](lhs: T, rhs: T): Any = macro assignImpl[T]
+  def __assign[T](lhs: Cell[T], rhs: T): Any = lhs.write(rhs)
+  def __whileDo(cond: Boolean, body: Unit): Any = macro whileDoImpl
+  def __doWhile(body: Unit, cond: Boolean): Any = macro doWhileImpl
   def __newVar[T](init: T): Cell[T] = SCell(init)
 
 
@@ -68,13 +68,8 @@ trait EmbeddedControls {
   def infix_*=[T](lhs: T, rhs: T): Unit = macro timesEqualsImpl[T]
   def infix_/=[T](lhs: T, rhs: T): Unit = macro divEqualsImpl[T]
 
-
-
-  // Poor man's infix methods for `Any` methods
-  def infix_+(x1: String, x2: Any): String = macro string_+
-  def infix_+(x1: Any, x2: Any): Any = macro any_+ // don't know the return type => should actually never be produced by LanguageVirtualization
-  def infix_==(x1: Any, x2: Any): Boolean = macro any_==
-  def infix_!=(x1: Any, x2: Any): Boolean = macro any_!=
+  def infix_==(x1: Any, x2: Any): Any = macro any_==
+  def infix_!=(x1: Any, x2: Any): Any = macro any_!=
 
   def infix_toString(x: Any): String = macro any_toString
 
@@ -120,12 +115,6 @@ private object EmbeddedControls {
     c.Expr(q"do $body while ($cond)")
   }
 
-  def string_+(c: Context)(
-    x1: c.Expr[String], x2: c.Expr[Any]): c.Expr[String] = {
-
-    import c.universe._
-    c.Expr(q"$x1.+($x2)")
-  }
 
   def plusEqualsImpl[T](c: Context)(lhs: c.Expr[T], rhs: c.Expr[T]): c.Expr[Unit] = {
     import c.universe._
@@ -147,12 +136,6 @@ private object EmbeddedControls {
     c.Expr(q"$lhs /= $rhs")
   }
 
-  def any_+(c: Context)(
-    x1: c.Expr[Any], x2: c.Expr[Any]): c.Expr[Any] = {
-
-    import c.universe._
-    c.Expr(q"$x1.+($x2)")
-  }
 
   def any_==(c: Context)(
     x1: c.Expr[Any], x2: c.Expr[Any]): c.Expr[Boolean] = {

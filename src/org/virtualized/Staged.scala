@@ -3,6 +3,7 @@ package org.virtualized
 
 import scala.annotation.StaticAnnotation
 import scala.meta._
+import scala.meta.contrib._
 
 /**
   stage macro to generate a simple api
@@ -114,3 +115,27 @@ class staged extends StaticAnnotation {
 
 }
 */
+
+class stageany extends StaticAnnotation {
+
+  inline def apply(defn: Any): Any = meta {
+
+    val treeTransform: PartialFunction[Tree, Tree] = {
+      case tpe@Type.Param(_,name,_,tbounds,_,cbounds) if cbounds.exists(_.equal[Structurally](t"StageAny"))  =>
+        val nm = name.value
+        val tparam: Type = Type.Name(nm)
+        val cbf = cbounds.filterNot(_.equal[Structurally](t"StageAny"))
+        val cbs = cbf :+ t"Staged"
+        tpe.copy(cbounds=cbs, tbounds = tbounds.copy(hi = Some(t"StageAny[$tparam]")))
+
+    }
+
+    defn match {
+      case t: Tree =>
+        t.transform(treeTransform).asInstanceOf[Stat]
+      case _ =>
+        abort("The virtualization is not applied to a Tree ? (this should be impossible)")
+    }
+  }
+
+}

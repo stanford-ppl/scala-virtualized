@@ -1,10 +1,9 @@
 name := "virtualized"
 
 scalaVersion := "2.12.1"
-
 organization := "org.virtualized"
 
-version := "0.6"
+version := "0.9-SNAPSHOT"
 
 val scalatestVersion = "3.0.1"
 

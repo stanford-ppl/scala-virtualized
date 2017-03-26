@@ -618,12 +618,10 @@ class VirtualizeVarsSpec extends FlatSpec with Matchers with EmbeddedControls {
     def __assign(lhs: Var[Int], rhs: Int): Unit = lhs.x = lhs.x + rhs
     implicit def __readVar(lhs: Var[Int]): Int = lhs.x
 
-    implicit class VarOps(lhs: Var[Int]) {
-      def +=(rhs: Int): String = s"${lhs.x} += $rhs"
-    }
+    def infix_+=(lhs:Var[Int], rhs: Int): String = s"${lhs.x} += $rhs"
 
     @virtualize
-    def test() = {
+    def test():String = {
       var x = 0
       x += 1
     }
