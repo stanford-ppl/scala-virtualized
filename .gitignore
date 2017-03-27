@@ -1,6 +1,27 @@
-# Any path containing "target"
-target
+*.class
+*.log
 
-# IntelliJ project files
+# sbt specific
+.cache
+.history
+.lib/
+dist/*
+out/*
+target/
+logs/*
+gen/*
+libs/*
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+
+### IntelliJ
 .idea/
 *.iml
+*.swp
+*.tags
