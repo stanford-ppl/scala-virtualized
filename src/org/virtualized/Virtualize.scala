@@ -1,56 +1,88 @@
 package org.virtualized
 
-import language.experimental.macros
 import scala.annotation.StaticAnnotation
-import scala.reflect.macros.blackbox.Context
+import scala.meta._
 
-/** Annotation class for @virtualize macro annotation. */
-final class virtualize extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro virtualize.impl
-}
+/**
+  * Converts Scala features that can not be overridden to method calls that can be given
+  * arbitrary semantics.
+  *
+  * ==Features covered are==
+  * {{{
+  *   var x = e              =>       val x = __newVar(e)
+  *   if(c) t else e         =>       __ifThenElse(c, t, e)
+  *   return t               =>       __return(t)
+  *   x = t                  =>       __assign(x, t)
+  *   while(c) b             =>       __whileDo(c, b)
+  *   do b while c           =>       __doWhile(c, b)
+  * }}}
+  *
+  *
+  * ===Poor man's infix methods for `Any` methods===
+  * {{{
+  *   t == t1                =>       infix_==(t, t1)
+  *   t != t1                =>       infix_!=(t, t1)
+  *   t *= t1                =>       infix_*=(t, t1)
+  *   t += t1                =>       infix_+=(t, t1)
+  *   t -= t1                =>       infix_-=(t, t1)
+  *   t /= t1                =>       infix_/=(t, t1)
+  * }}}
+  */
 
-/** Companion object implementing @virtualize macro annotation. */
-private object virtualize {
-  def impl(c: Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
+class virtualize extends StaticAnnotation {
 
-    /* Create a transformer for virtualization. */
-    val transformer = new Virtualizer[c.type](c)
+  inline def apply(defn: Any): Any = meta {
 
-    /* The first element of `annottee` is the one actually carrying the
-     * annotation.  The rest are owners/companions (class, method,
-     * object, etc.), and we don't want to virtualize them.
-     *
-     * Also, for now, we don't virtualize annotated type, class or
-     * method parameters (this may change in the future).
-     */
-    val inputs = annottees.map(_.tree).toList
-    val (annottee, rest) = inputs match {
-      case (a: ValDef) :: as if a.mods.hasFlag(Flag.PARAM) =>
-        c.warning(c.enclosingPosition, "virtualization of parameters is not supported.")
-        (None, inputs)
-      case (a: TypeDef) :: as =>
-        c.warning(c.enclosingPosition, "virtualization of type parameters is not supported.")
-        (None, inputs)
+    val treeTransform: PartialFunction[Tree, Tree] = {
+      case q"if ($b) $t else $f" =>
+        q"__ifThenElse($b, $t, $f)"
 
-      case a :: as => (Some(a), as)
-      case Nil     => (None, Nil)
+      case q"return $e" =>
+        q"__return($e)"
+
+      case q"$ref = $e" =>
+        q"__assign($ref, $e)"
+
+      case q"while ($b) $e" =>
+        q"__whileDo($b, $e)"
+
+      case q"do $e while($b)" =>
+        q"__doWhile($b, $e)"
+
+      case Defn.Var(mods, pats, dcltpe, rhs) =>
+        val tpe = dcltpe.map(tp => t"Cell[$tp]")
+        val dcl = rhs.getOrElse(null)
+        val newVar = q"__newVar($dcl)"
+        Defn.Val(mods, pats, tpe, newVar)
+
+      case q"$e1 == $e2" =>
+        q"infix_==($e1, $e2)"
+
+      case q"$e1 != $e2" =>
+        q"infix_!=($e1, $e2)"
+
+      case q"$e1 += $e2" =>
+        q"infix_+=($e1, $e2)"
+
+      case q"$e1 -= $e2" =>
+        q"infix_-=($e1, $e2)"
+
+      case q"$e1 *= $e2" =>
+        q"infix_*=($e1, $e2)"
+
+      case q"$e1 /= $e2" =>
+        q"infix_/=($e1, $e2)"
+
+      case q"$t.toString" =>
+        q"infix_toString($t)"
     }
 
-    /* Virtualize the annottee. */
-    val expandees = annottee match {
-      case Some(a) => transformer.virtualize(a)._1 ::: rest
-      case None    => rest
+    defn match {
+      case t: Tree =>
+        t.transform(treeTransform).asInstanceOf[Stat]
+      case _ =>
+        abort("The virtualization is not applied to a Tree ? (this should be impossible)")
     }
-
-    //c.info(c.enclosingPosition, showCode(expandees.head), true)
-
-    c.Expr(Block(expandees, Literal(Constant(()))))
   }
 
-  private final class Virtualizer[C <: Context](val c: C)
-    extends LanguageVirtualization {
-    type Ctx = C
-    val debugLevel = 0
-  }
 }
