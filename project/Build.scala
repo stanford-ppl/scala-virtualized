@@ -1,5 +1,5 @@
-import sbt.Keys.resolvers
-import sbt.{Compile, _}
+import sbt._
+import Keys.{resolvers, _}
 
 object VirtualizedBuild extends Build {
 
