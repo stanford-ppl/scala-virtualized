@@ -63,6 +63,8 @@ object SourceContext {
   private case class ConcreteSourceContext(path: String, fileName: String, line: Int, column: Int, methodName: String, assignedVariable: Option[String], lineContent: Option[String]) extends SourceContext {
     override def toString(): String = fileName + ":" + line + ":" + column
   }
+
+  def empty = EmptyContext
 }
 
 object EmptyContext extends SourceContext {
