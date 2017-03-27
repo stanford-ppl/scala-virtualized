@@ -75,6 +75,16 @@ class virtualize extends StaticAnnotation {
 
       case q"$t.toString" =>
         q"infix_toString($t)"
+
+      case q"$t.toString" =>
+        q"infix_toString($t)"
+
+      case q"$x.asInstanceOf[$tpe]" =>
+        q"infix_asInstanceOf[$tpe](x)"
+
+      case q"$x.isInstanceOf[$tpe]" =>
+        q"infix_isInstanceOf[$tpe](x)"
+
     }
 
     defn match {

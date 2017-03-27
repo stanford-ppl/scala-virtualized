@@ -72,6 +72,8 @@ trait EmbeddedControls {
   def infix_!=(x1: Any, x2: Any): Any = macro any_!=
 
   def infix_toString(x: Any): String = macro any_toString
+  def infix_asInstanceOf[T](x: Any): T = macro any_asInstanceOf[T]
+  def infix_isInstanceOf[T](x: Any): Any = macro any_isInstanceOf[T]
 
 
 }
@@ -155,6 +157,20 @@ private object EmbeddedControls {
 
     import c.universe._
     c.Expr(q"$x.toString()")
+  }
+
+  def any_asInstanceOf[T](c: Context)(x: c.Expr[Any])(
+    implicit tt: c.WeakTypeTag[T]): c.Expr[T] = {
+
+    import c.universe._
+    c.Expr(q"$x.asInstanceOf[${tt.tpe}]")
+  }
+
+  def any_isInstanceOf[T](c: Context)(x: c.Expr[Any])(
+    implicit tt: c.WeakTypeTag[T]): c.Expr[Any] = {
+
+    import c.universe._
+    c.Expr[Boolean](q"$x.isInstanceOf[${tt.tpe}]")
   }
 
 
