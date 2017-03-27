@@ -8,7 +8,7 @@ object VirtualizedBuild extends Build {
   val paradiseVersion = "3.0.0-M7"  // check here: https://github.com/scalamacros/paradise/releases
   val metaVersion = "1.6.0"
 
-  lazy val virtBuildSettings = Defaults.defaultSettings ++ Seq(
+  lazy val virtBuildSettings = Defaults.coreDefaultSettings ++ Seq(
     organization := "org.virtualized",
     scalaVersion := compilerVersion,
 
