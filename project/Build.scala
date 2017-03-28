@@ -54,9 +54,12 @@ object VirtualizedBuild extends Build {
     parallelExecution in Test := false,
     concurrentRestrictions in Global += Tags.limitAll(1) // we need tests to run in isolation across all projects
   )
+
   lazy val virtualizedSettings = virtBuildSettings ++ Seq(
     name := "virtualized",
     version := "0.2",
     isSnapshot := true 
   )
+
+  lazy val virtualized = Project("scala-virtualized", file("."), settings = virtualizedSettings)
 }
