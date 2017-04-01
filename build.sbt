@@ -2,19 +2,18 @@ name := "virtualized"
 
 organization := "org.virtualized"
 
+scalaVersion in ThisBuild := "2.12.1"
+
 //publish
-//branch dependant
 val suffix = ""
 val versionNumber = "0.2"
-version := "0.2" + suffix
+version := versionNumber + suffix
 isSnapshot := true
 
 //dependencies versions
-scalaVersion in ThisBuild := "2.12.1"
 val paradiseVersion = "2.1.0"
 val scalatestVersion = "3.0.1"
 
-//dependencies
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 libraryDependencies += "org.scalatest" %% "scalatest" % scalatestVersion % "test"
 
