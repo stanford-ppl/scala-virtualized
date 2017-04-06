@@ -49,6 +49,8 @@ trait EmbeddedControls {
   def __newVar[T](init: T): T = macro newVarImpl[T]
   def __readVar[T](init: T): T = macro readVarImpl[T] // different than LMS var! TODO: Never explicitly created!
 
+  def __valDef[T](init: T, name: String): Unit = macro valDefImpl[T]
+
 //  def __lazyValDef[T](init: T): T = macro lazyValDefImpl[T]
 //  def __valDef[T](init: T): T = macro valDefImpl[T]
 
@@ -125,7 +127,11 @@ private object EmbeddedControls {
 
   def readVarImpl[T](c: Context)(init: c.Expr[T]): c.Expr[T] = init
 
-//  def valDefImpl[T](c: Context)(init: c.Expr[T]): c.Expr[T] = init
+  def valDefImpl[T](c: Context)(init: c.Expr[T], name: c.Expr[String]): c.Expr[Unit] = {
+    import c.universe._
+    c.Expr(q"()")
+  }
+
 //
 //  def lazyValDefImpl[T](c: Context)(init: c.Expr[T]): c.Expr[T] = init
 

@@ -3,7 +3,7 @@ package org.virtualized
 import scala.reflect.macros.blackbox.Context
 import scala.language.experimental.macros
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 
 /** A SourceContext is a descriptor for the invocation of a method that takes
  *  an implicit parameter of type SourceContext. It provides information about the
@@ -31,15 +31,17 @@ trait SourceContext {
 
   /** The name of the method being called
    */
-  def methodName: String
+  var methodName: String
 
   /** The name of the value / variable instantiated to hold the result of the method
    */
-  def assignedVariable: Option[String]
+  var assignedVariable: Option[String]
 
   /** The content at the given source line
     */
   def lineContent: Option[String]
+
+  var lhsName: Option[String]
 
   // Not yet supported
   // def parent: Option[SourceContext]
@@ -60,9 +62,16 @@ object SourceContext {
   def apply(path: String, fileName: String, line: Int, column: Int, methodName: String, assignedVariable: Option[String], lineContent: Option[String]): SourceContext =
     ConcreteSourceContext(path, fileName, line, column, methodName, assignedVariable, lineContent)
 
-  private case class ConcreteSourceContext(path: String, fileName: String, line: Int, column: Int, methodName: String, assignedVariable: Option[String], lineContent: Option[String]) extends SourceContext {
-    override def toString(): String = fileName + ":" + line + ":" + column
-  }
+  private case class ConcreteSourceContext(
+    path:       String,
+    fileName:   String,
+    line:       Int,
+    column:     Int,
+    var methodName: String,
+    var assignedVariable: Option[String],
+    lineContent: Option[String],
+    var lhsName: Option[String]
+  ) extends SourceContext
 
   def empty = EmptyContext
 }
@@ -72,9 +81,10 @@ object EmptyContext extends SourceContext {
   def fileName = ""
   def line = 0
   def column = 0
-  def methodName = ""
-  def assignedVariable = None
+  var methodName = ""
+  var assignedVariable: Option[String] = None
   def lineContent = None
+  var lhsName: Option[String] = None
   override def toString() = "?:?:?"
 }
 
@@ -83,8 +93,8 @@ private object SourceContextMacro {
 
   // HACK: Mantain a hashmap for the number of times we've seen a specific tight string and the number of operands in that string
   // This is pants-on-head stupid and needs to be replaced with a simple lookup once that's available
-  var visits = HashMap[String, Int]()
-  var depths = HashMap[String, Int]()
+  var visits = mutable.HashMap[String, Int]()
+  var depths = mutable.HashMap[String, Int]()
 
   def impl(c: Context): c.Expr[SourceContext] = {
     import c.universe._
@@ -107,7 +117,7 @@ private object SourceContextMacro {
     // We can then reparse the immediate area (stopping at parentheses, spaces, periods, semicolons) to get the method
     // Also include try-catch blocks for now just in case we somehow mess up when splicing the string
 
-    // TODO: pos.source.lineToString occassionally doesn't match up with the given column?
+    // TODO: pos.source.lineToString occasionally doesn't match up with the given column?
     val methodName = if (line > 0 && column > 0) {
       try {
         val str = pos.source.lineToString(line-1)

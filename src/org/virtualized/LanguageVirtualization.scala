@@ -98,6 +98,12 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         List(v, d)
       */
+      case v@ValDef(mods, term@TermName(name), _, _) if !mods.hasFlag(Flag.PARAMACCESSOR) =>
+        val vdef = transform(v)
+        val n = Literal(Constant(name.toString))
+        val regv = Apply(Ident(TermName("__valDef")), List(Ident(term), Literal(Constant(name))))
+
+        List(vdef, regv)
 
       case _ => List(transform(tree))
     }
@@ -126,6 +132,8 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           ValDef(mods, sym, tpt, liftFeature(None, "__newVar", List(rhs)))
 
         case Assign(lhs, rhs) =>
+          // liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))   // Name mangling version
+
           liftFeature(None, "__assign", List(lhs, rhs))
 
         // Don't rewrite +=, -=, *=, and /=. This restricts the return value to Unit
@@ -144,11 +152,6 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case Apply(Select(qualifier, TermName("$div$eq")), List(arg)) =>      // x /= y
           liftFeature(None, "infix_$div$eq", List(qualifier, arg))
         */
-
-
-        // Name mangling version
-        /*case Assign(Ident(lhs), rhs) =>
-          liftFeature(None, "__assign", List(Ident(lhs+"$v"), rhs))*/
 
 
         /* Control structures (keywords) */
@@ -283,13 +286,13 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case ClassDef(mods, name, tpt, body) if mods.hasFlag(Flag.CASE) =>
           // sstucki: there are issues with the ordering of
           // virtualization and expansion of case classes (i.e. some
-          // of the expanded code might be org.virtualized even though it
+          // of the expanded code might be virtualized even though it
           // should not be and vice-versa).  So until we have decided
           // how proper virtualization of case classes should be done,
           // any attempt to do so should fail.
           // TR: not 100% sure what the issue is (although i vaguely
-          // remember that we had issues in Scala-org.virtualized with
-          // auto-generated case class equality methods using org.virtualized
+          // remember that we had issues in Scala-virtualized with
+          // auto-generated case class equality methods using virtualized
           // equality where it shouldn't). For the moment it seems like
           // just treating case classes as regular classes works fine.
           c.warning(tree.pos, "virtualization of case classes is not fully supported.")
@@ -302,7 +305,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         // USAGE:
         // magic() //have to make an explicit call to 'execute' side effects
         // @virtualize //values could not be annotated...
-        // def magic[R]() = withTpee(Community){ //rhs pattern is matched by org.virtualized
+        // def magic[R]() = withTpee(Community){ //rhs pattern is matched by virtualized
 
         case Apply(Apply(Ident(TermName("withTpee")), List(termName)), body) =>
           val objName = TermName(termName.toString()+"Object")
