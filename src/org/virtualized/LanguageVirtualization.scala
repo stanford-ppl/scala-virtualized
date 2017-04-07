@@ -365,6 +365,38 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
           c.warning(tree.pos, s"SCOPE GENERATED: \n RAW: "+showRaw(ret)+"\n CODE: "+showCode(ret))
           ret
 
+
+        // Argon-specific hack for changing T:Type to T<:MetaAny[T]:Type
+        case DefDef(mods,name,tparams,paramss,retTpe,body) =>
+          if (paramss.nonEmpty) {
+            val metaTypes = paramss.last.collect{
+              case ValDef(ms,_,AppliedTypeTree(Ident(TypeName("Meta")),List(typeTree)),rhs) if ms.hasFlag(Flag.IMPLICIT) => typeTree
+              case ValDef(ms,_,AppliedTypeTree(Ident(TypeName("Type")),List(typeTree)),rhs) if ms.hasFlag(Flag.IMPLICIT) => typeTree
+            }
+
+            object TypedTree {
+              def unapply(x: Tree): Option[String] = x match {
+                case Ident(TypeName(typeName)) => Some(typeName)
+                case AppliedTypeTree(TypedTree(typeName),args) => Some(typeName)
+                case ExistentialType(TypedTree(typeName),args) => Some(typeName)
+              }
+            }
+            val metaTypeNames = metaTypes.map{case TypedTree(typeName) => typeName }
+
+            val newParams = tparams.map{
+              case TypeDef(ms,TypeName(typeName),targs,TypeBoundsTree(child,EmptyTree)) if metaTypeNames.contains(typeName) =>
+                val i = metaTypeNames.indexOf(typeName)
+                val superBound = AppliedTypeTree(Ident(TypeName("MetaAny")), List(metaTypes(i)))
+                TypeDef(ms,TypeName(typeName),targs,TypeBoundsTree(child,superBound))
+
+              case tp => tp
+            }
+
+            super.transform( DefDef(mods,name,newParams,paramss,retTpe,body) )
+
+          }
+          else super.transform(tree)
+
         case _ =>
           super.transform(tree)
       }

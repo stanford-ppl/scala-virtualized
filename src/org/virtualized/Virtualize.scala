@@ -43,7 +43,7 @@ private object virtualize {
       case None    => rest
     }
 
-    //c.info(c.enclosingPosition, showCode(expandees.head), true)
+    // c.info(c.enclosingPosition, showCode(expandees.head), true)
 
     c.Expr(Block(expandees, Literal(Constant(()))))
   }
