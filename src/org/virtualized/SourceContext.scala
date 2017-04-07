@@ -60,7 +60,7 @@ object SourceContext {
   implicit def _sc: SourceContext = macro SourceContextMacro.impl
 
   def apply(path: String, fileName: String, line: Int, column: Int, methodName: String, assignedVariable: Option[String], lineContent: Option[String]): SourceContext =
-    ConcreteSourceContext(path, fileName, line, column, methodName, assignedVariable, lineContent)
+    ConcreteSourceContext(path, fileName, line, column, methodName, assignedVariable, lineContent, None)
 
   private case class ConcreteSourceContext(
     path:       String,
