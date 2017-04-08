@@ -368,6 +368,19 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
 
         // Argon-specific hack for changing T:Type to T<:MetaAny[T]:Type
         case DefDef(mods,name,tparams,paramss,retTpe,body) =>
+          // HACK: Change return type from IR.Void to scala.Unit
+          // This is to allow both
+          //   def method() { } and
+          //   def method(): Unit = { } syntax
+          // Since lifting from scala.Unit to IR.Void is supported in argon,
+          // but not IR.Unit to scala.Unit, this is the only sane thing to do
+          val modifiedRetTpe = retTpe match {
+            case Ident(TypeName("Unit")) =>
+              Select(Ident(TermName("scala")),TypeName("Unit"))
+
+            case tp => tp
+          }
+
           if (paramss.nonEmpty) {
             val metaTypes = paramss.last.collect{
               case ValDef(ms,_,AppliedTypeTree(Ident(TypeName("Meta")),List(typeTree)),rhs) if ms.hasFlag(Flag.IMPLICIT) => typeTree
@@ -383,7 +396,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
             }
             val metaTypeNames = metaTypes.map{case TypedTree(typeName) => typeName }
 
-            val newParams = tparams.map{
+            val newTParams = tparams.map{
               case TypeDef(ms,TypeName(typeName),targs,TypeBoundsTree(child,EmptyTree)) if metaTypeNames.contains(typeName) =>
                 val i = metaTypeNames.indexOf(typeName)
                 val superBound = AppliedTypeTree(Ident(TypeName("MetaAny")), List(metaTypes(i)))
@@ -392,10 +405,10 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
               case tp => tp
             }
 
-            super.transform( DefDef(mods,name,newParams,paramss,retTpe,body) )
+            super.transform( DefDef(mods,name,newTParams,paramss,modifiedRetTpe,body) )
 
           }
-          else super.transform(tree)
+          else super.transform(DefDef(mods,name,tparams,paramss,modifiedRetTpe,body))
 
         case _ =>
           super.transform(tree)
