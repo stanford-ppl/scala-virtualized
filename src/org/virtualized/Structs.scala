@@ -45,6 +45,10 @@ object StagedStructsMacro {
 
         assert(methods.head match { case _: DefDef => true }) // the constructor
 
+        val constructorArgs = methods.collect{
+          case DefDef(ms,name,tparams,argss,_,_) if name == termNames.CONSTRUCTOR => argss
+        }.head
+
         /**
           * Staged class definition
           */
@@ -102,10 +106,11 @@ object StagedStructsMacro {
         /**
           * Constructor
           */
-        val args = fields.map{
-          case ValDef(_, termName, typeIdent, _) =>
-            ValDef(Modifiers(Flag.PARAM), termName, typeIdent, EmptyTree)
-        }
+        val argss = constructorArgs.map{ args => args.map{
+          case ValDef(_, termName, typeIdent, rhs) =>
+            val mods = if (rhs == EmptyTree) Modifiers(Flag.PARAM) else Modifiers(Flag.PARAM | Flag.DEFAULTPARAM)
+            ValDef(mods, termName, typeIdent, rhs)
+        }}
         val body = fields.map{
           case ValDef(_, termName, typeIdent, rhs) =>
             q"${Literal(Constant(termName.toString))} -> $termName.s"
@@ -113,14 +118,14 @@ object StagedStructsMacro {
 
         // TODO: We assume for now that struct annotation is always used within a trait - any way to be more general?
 
-        val mdef = q"def ${className.toTermName}(..$args): $className = struct[$className]( ..$body )"
+        val mdef = q"def ${className.toTermName}(...$argss): $className = struct[$className]( ..$body )"
 
         // Implicit object must come before class definition
         val cc = q"$stg ; $ev ; $cls ; $mdef ; ..$evidences"
 
         // Debugging
-        //c.info(tree.pos, showCode(cc), force = true)
-        //c.info(tree.pos, showRaw(cc), force = true)
+        // c.info(tree.pos, showCode(mdef), force = true)
+        // c.info(tree.pos, showRaw(mdef), force = true)
         cc
 
       case _ =>
