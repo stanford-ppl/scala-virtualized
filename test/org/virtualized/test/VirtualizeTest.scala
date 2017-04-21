@@ -207,7 +207,8 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
   }
 
   // Should use default `__ifThenElse` from EmbeddedControls.
-  "defaultIfTest" should "be virtualized" in {
+  // TODO: Default for __newVar
+  /*"defaultIfTest" should "be virtualized" in {
 
     @virtualize
     def defaultIfTest(c: Boolean) = if (c) "yep" else {
@@ -224,7 +225,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
     defaultSuperTypeIfTest(false) shouldBe "nope"
     defaultSuperTypeIfTest(true) shouldBe List(1,2,3)
 
-  }
+  }*/
 
   // Should use inner org.virtualized `__ifThenElse`
   "virtualizeInnerIfTest" should "be virtualized" in {

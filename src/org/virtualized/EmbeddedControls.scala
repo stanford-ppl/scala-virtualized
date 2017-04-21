@@ -43,13 +43,19 @@ trait EmbeddedControls {
   // Control structures
   def __ifThenElse[T](cond: Boolean, thenBr: T, elseBr: T): T = macro ifThenElseImpl[T]
   def __return(expr: Any): Nothing = macro returnImpl
-  def __assign[T](lhs: T, rhs: T): Unit = macro assignImpl[T]
   def __whileDo(cond: Boolean, body: Unit): Unit = macro whileDoImpl
   def __doWhile(body: Unit, cond: Boolean): Unit = macro doWhileImpl
-  def __newVar[T](init: T): T = macro newVarImpl[T]
-  def __readVar[T](init: T): T = macro readVarImpl[T] // different than LMS var! TODO: Never explicitly created!
+
+  // TODO: Way to have this not conflict with staged variable creation?
+  //def __newVar[T](init: T): T = macro newVarImpl[T]
+
+  def __readVar[T](v: T): T = macro readVarImpl[T] // different than LMS var! TODO: Never explicitly created!
+  def __assign[T](lhs: T, rhs: T): Unit = macro assignImpl[T]
 
   def __valDef(init: Any, name: String): Unit = macro valDefImpl
+
+  // def __match[A,R](selector: A, cases: Seq[A => R]): R = macro matchImpl[A,R]
+  // def __typedCase[A,T,R](bind: T, guard: Boolean, body: R): A => R = macro typedCaseImpl[A,T,R]
 
 //  def __lazyValDef[T](init: T): T = macro lazyValDefImpl[T]
 //  def __valDef[T](init: T): T = macro valDefImpl[T]
@@ -125,7 +131,7 @@ private object EmbeddedControls {
 
   def newVarImpl[T](c: Context)(init: c.Expr[T]): c.Expr[T] = init
 
-  def readVarImpl[T](c: Context)(init: c.Expr[T]): c.Expr[T] = init
+  def readVarImpl[T](c: Context)(v: c.Expr[T]): c.Expr[T] = v
 
   def valDefImpl(c: Context)(init: c.Expr[Any], name: c.Expr[String]): c.Expr[Unit] = {
     import c.universe._

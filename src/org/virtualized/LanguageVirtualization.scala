@@ -281,8 +281,41 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
         case Select(qualifier, TermName("getClass")) =>
           liftFeature(None, "infix_getClass", List(qualifier))
 
-        /* Unsupported */
+        // HACK: Transform into if-then-else for now. Better way?
+        /*case Match(selector, cases) => tree
 
+          def transformCase(cases: Seq[Tree]): Tree = {
+            def transformSingleCase(cas: Tree, els: => Tree): Tree = cas match {
+              // case name: Type if guard => body
+              case CaseDef(Bind(name, Typed(typeTree)), EmptyTree, body) => If(q"$selector.isInstanceOf[$typeTree]", body, els)
+              case CaseDef(Bind(name, Typed(typeTree)), guard, body) => If(q"$selector.isInstanceOf[$typeTree] && $guard", body, els)
+
+              // case Unapply(args...) if guard => body
+              case CaseDef(Apply(unapply, List(args)), _, _) => c.abort(c.enclosingPosition, "Virtualization of unapply methods is currently unsupported")
+              case CaseDef(Bind(name, Apply(unapply, List(args))), _, _) => c.abort(c.enclosingPosition, "Virtualization of unapply methods is currently unsupported")
+
+              // case name @ pattern if guard => body
+              case CaseDef(Bind(name, pattern), EmptyTree, body) => If(q"$selector == $pattern", body, els)
+              case CaseDef(Bind(name, pattern), guard, body) => If(q"$selector == $pattern && $guard", body, els)
+
+              // case pattern if guard => body
+              case CaseDef(pattern, EmptyTree, body) => If(q"$selector == $pattern", body, els)
+              case CaseDef(pattern, guard, body) => If(q"$selector == $pattern && $guard", body, els)
+            }
+
+            if (cases.length == 2) (cases(0),cases(1)) match {
+              case (c0, CaseDef(Ident(termNames.WILDCARD), EmptyTree, body)) => transformSingleCase(c0, body)
+              case _ => transformSingleCase(cases.head, transformCase(cases.tail))
+            }
+            else if (cases.length > 2) {
+              transformSingleCase(cases.head, transformCase(cases.tail))
+            }
+            else {
+              transformSingleCase(cases.head, q"()")
+            }
+          }*/
+
+        /* Unsupported */
         case ClassDef(mods, name, tpt, body) if mods.hasFlag(Flag.CASE) =>
           // sstucki: there are issues with the ordering of
           // virtualization and expansion of case classes (i.e. some
