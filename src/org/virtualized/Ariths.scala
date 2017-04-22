@@ -16,17 +16,21 @@ object Ariths extends TypeclassMacro {
         val classTerm = className.toTermName
         val fieldNames = fields.map { case ValDef(_, name, _, _) => name }
         val fieldTypes = fields.map { case ValDef(_, _, typ, _) => typ }
-        val distinctChildren = fieldTypes.map(_.toString).distinct
-        val typeMapping = fieldTypes.map { x => distinctChildren.indexWhere { y => x.toString == y } }
-        val distinctTypes = distinctChildren.map { x => TypeName(x) }
+
+        val distinctChildren = fieldTypes.distinct
+        val typeMapping = fieldTypes.map { x => distinctChildren.indexWhere { y => x == y } }
+        val distinctTypes = distinctChildren
+
         val arithEvidence = List.tabulate(distinctTypes.length) { i => TermName("arith" + i) }
         val stgEvidence = List.tabulate(distinctTypes.length) { i => TermName("tp" + i) }
         val evidences = arithEvidence ++ stgEvidence
         val arithEvidenceParams = distinctTypes.zip(arithEvidence).map { case (tp, term) =>
-          q"$term: Arith[$tp]"
+          ValDef(Modifiers(),term,AppliedTypeTree(Ident(TypeName("Arith")), List(tp)),EmptyTree)
+          //q"$term: Arith[$tp]"
         }
         val stgEvidenceParams = distinctTypes.zip(stgEvidence).map { case (tp, term) =>
-          q"$term: Type[$tp]"
+          ValDef(Modifiers(),term,AppliedTypeTree(Ident(TypeName("Type")), List(tp)),EmptyTree)
+          //q"$term: Type[$tp]"
         }
         val implicits = arithEvidenceParams ++ stgEvidenceParams
         val fieldAriths = typeMapping.map { i => arithEvidence(i) }

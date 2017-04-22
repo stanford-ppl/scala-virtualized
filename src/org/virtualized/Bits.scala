@@ -18,20 +18,22 @@ object Bits extends TypeclassMacro {
         val fieldNames = fields.map{case ValDef(_,name,_,_) => name }
         val fieldTypes = fields.map{case ValDef(_,_,typ,_)  => typ }
 
-        val distinctChildren = fieldTypes.map(_.toString).distinct
-        val typeMapping = fieldTypes.map{x => distinctChildren.indexWhere{y => x.toString == y} }
+        val distinctChildren = fieldTypes.distinct
+        val typeMapping = fieldTypes.map{x => distinctChildren.indexWhere{y => x == y} }
 
-        val distinctTypes = distinctChildren.map{x => TypeName(x) }
+        val distinctTypes = distinctChildren
 
         val bitEvidence = List.tabulate(distinctTypes.length){i => TermName("bits"+i) }
         val stgEvidence = List.tabulate(distinctTypes.length){i => TermName("tp"+i) }
         val evidences = bitEvidence ++ stgEvidence
 
         val bitEvidenceParams = distinctTypes.zip(bitEvidence).map{case (tp,term) =>
-          q"$term: Bits[$tp]"
+          ValDef(Modifiers(),term,AppliedTypeTree(Ident(TypeName("Bits")), List(tp)),EmptyTree)
+          //q"$term: Bits[$tp]"
         }
         val stgEvidenceParams = distinctTypes.zip(stgEvidence).map{case (tp,term) =>
-          q"$term: Type[$tp]"
+          ValDef(Modifiers(),term,AppliedTypeTree(Ident(TypeName("Type")), List(tp)),EmptyTree)
+          //q"$term: Type[$tp]"
         }
         val implicits = bitEvidenceParams ++ stgEvidenceParams
 
