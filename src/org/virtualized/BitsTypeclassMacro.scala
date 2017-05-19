@@ -3,7 +3,7 @@ package org.virtualized
 import scala.reflect.macros.blackbox
 
 
-object Bits extends TypeclassMacro {
+private[virtualized] object BitsTypeclassMacro extends TypeclassMacro {
   override def generateLookup(c: blackbox.Context)(name: c.TypeName): Option[c.Tree] = {
     import c.universe._
     Some( Ident(TypeName(name.toString + "CanBits")) )
@@ -39,11 +39,11 @@ object Bits extends TypeclassMacro {
 
         val fieldBitEvidence = typeMapping.map{i => bitEvidence(i) }
 
-        val zero = fieldBitEvidence.map{child => q"$child.zero" }
-        val one  = fieldBitEvidence.map{child => q"$child.one" }
+        val zero = fieldBitEvidence.map{child => q"$child.zero(ctx,state)" }
+        val one  = fieldBitEvidence.map{child => q"$child.one(ctx,state)" }
 
-        val maxes = fieldNames.zipWithIndex.map{case (field,i) => q"val ${TermName("field"+i)} = max.map(_.$field)" }
-        val rands = fieldBitEvidence.zipWithIndex.map{case (child,i) => q"$child.random(${TermName("field"+i)})"}
+        val maxes = fieldNames.zipWithIndex.map{case (field,i) => q"val ${TermName("field"+i)} = max.map(_.$field(ctx,state))" }
+        val rands = fieldBitEvidence.zipWithIndex.map{case (child,i) => q"$child.random(${TermName("field"+i)})(ctx,state)"}
         val lens  = fieldBitEvidence.map{child => q"$child.length" }
 
         /**
@@ -52,11 +52,15 @@ object Bits extends TypeclassMacro {
         val cls =
         q"""
           class ${TypeName(className.toString + "Bits")}()(implicit ..$implicits) extends Bits[$className] {
-            override def zero(implicit ctx: SrcCtx): $className = $classTerm ( ..$zero ) // Calls constructor
-            override def one(implicit ctx: SrcCtx): $className = $classTerm ( ..$one )   // Calls constructor
-            override def random(max: Option[$className])(implicit ctx: SrcCtx): $className = {
+            override def zero(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
+              $classTerm ( ..$zero )(ctx,state)  // Calls constructor
+            }
+            override def one(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
+              $classTerm ( ..$one )(ctx,state)   // Calls constructor
+            }
+            override def random(max: Option[$className])(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
               ..$maxes
-              $classTerm (..$rands) // Calls constructor
+              $classTerm (..$rands)(ctx,state)   // Calls constructor
             }
             override def length = List(..$lens).sum    // Other way to generate arbitrary summation?
           }
@@ -82,7 +86,7 @@ object Bits extends TypeclassMacro {
         val lookup =
           q"""
             // Hack 2: The Hackening
-            trait ${TypeName(className.toString + "CanBits")} extends CanBits[$className] { this: StructType[$className] =>
+            trait ${TypeName(className.toString + "CanBits")} extends CanBits[$className] { this: argon.nodes.StructType[$className] =>
               override protected def getBits(children: Seq[Type[_]]): Option[Bits[$className]] = {
                 val fieldTypes = this.fields.map(_._2)
                 val distinctFields = List(..$typeMapping).map{i => fieldTypes(i) }

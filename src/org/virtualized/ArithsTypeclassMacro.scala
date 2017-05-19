@@ -2,7 +2,7 @@ package org.virtualized
 
 import scala.reflect.macros.blackbox
 
-object Ariths extends TypeclassMacro {
+private[virtualized] object ArithsTypeclassMacro extends TypeclassMacro {
 
   override def generateLookup(c: blackbox.Context)(name: c.TypeName): Option[c.Tree] = {
     None
@@ -38,14 +38,14 @@ object Ariths extends TypeclassMacro {
         val aFields = List.tabulate(fields.length){i => TermName("fieldA" + i) }
         val bFields = List.tabulate(fields.length){i => TermName("fieldB" + i) }
 
-        val aFieldsGet = fieldNames.zip(aFields).map{case (field,term) => q"val $term = a.$field" }
-        val bFieldsGet = fieldNames.zip(bFields).map{case (field,term) => q"val $term = b.$field" }
+        val aFieldsGet = fieldNames.zip(aFields).map{case (field,term) => q"val $term = a.$field(ctx,state)" }
+        val bFieldsGet = fieldNames.zip(bFields).map{case (field,term) => q"val $term = b.$field(ctx,state)" }
 
-        val neg = aFields.zip(fieldAriths).map{case (term,arith) => q"$arith.negate($term)" }
-        val plus = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.plus($a,$b)" }
-        val minus = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.minus($a,$b)" }
-        val times = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.times($a,$b)" }
-        val divide = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.divide($a,$b)" }
+        val neg = aFields.zip(fieldAriths).map{case (term,arith) => q"$arith.negate($term)(ctx,state)" }
+        val plus = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.plus($a,$b)(ctx,state)" }
+        val minus = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.minus($a,$b)(ctx,state)" }
+        val times = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.times($a,$b)(ctx,state)" }
+        val divide = (aFields, bFields, fieldAriths).zipped.map{case (a, b, arith) => q"$arith.divide($a,$b)(ctx,state)" }
 
         /**
           * Type class instance
@@ -53,29 +53,29 @@ object Ariths extends TypeclassMacro {
         val cls =
           q"""
             class ${TypeName(className.toString + "Arith")}()(implicit ..$implicits) extends Arith[$className] {
-              override def negate(a: $className)(implicit ctx: SrcCtx): $className = {
+              override def negate(a: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
                 ..$aFieldsGet
-                $classTerm ( ..$neg )
+                $classTerm ( ..$neg )(ctx,state)
               }
-              override def plus(a: $className, b: $className)(implicit ctx: SrcCtx): $className = {
+              override def plus(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
-                $classTerm ( ..$plus )
+                $classTerm ( ..$plus )(ctx,state)
               }
-              override def minus(a: $className, b: $className)(implicit ctx: SrcCtx): $className = {
+              override def minus(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
-                $classTerm ( ..$minus )
+                $classTerm ( ..$minus )(ctx,state)
               }
-              override def times(a: $className, b: $className)(implicit ctx: SrcCtx): $className = {
+              override def times(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
-                $classTerm ( ..$times )
+                $classTerm ( ..$times )(ctx,state)
               }
-              override def divide(a: $className, b: $className)(implicit ctx: SrcCtx): $className = {
+              override def divide(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
-                $classTerm ( ..$divide )
+                $classTerm ( ..$divide )(ctx,state)
               }
 
             }

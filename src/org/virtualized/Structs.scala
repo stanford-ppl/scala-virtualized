@@ -23,7 +23,7 @@ abstract class TypeclassMacro {
 
 
 object StagedStructsMacro {
-  val typeclasses: List[TypeclassMacro] = List(Bits, Ariths)
+  val typeclasses: List[TypeclassMacro] = List(BitsTypeclassMacro, ArithsTypeclassMacro)
 
   def impl(c: blackbox.Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
@@ -57,12 +57,12 @@ object StagedStructsMacro {
             //q"var $termName: $typeIdent"
             c.abort(c.enclosingPosition, "virtualization of variable fields is currently unsupported")
           case ValDef(mods, termName, typeIdent, rhs) =>
-            q"""def $termName: $typeIdent = field[$typeIdent](${Literal(Constant(termName.toString))})"""
+            q"""def $termName(implicit ctx: org.virtualized.SourceContext, state: argon.State): $typeIdent = field[$typeIdent](${Literal(Constant(termName.toString))})(implicitly[Type[$typeIdent]],ctx,state)"""
         }
 
         val cls =
           q"""
-            case class $className(s: Exp[$className]) extends MetaStruct[$className] {
+            case class $className(s: Exp[$className]) extends Struct[$className] {
               ..$fieldList
             }
            """
@@ -88,7 +88,7 @@ object StagedStructsMacro {
 
         val stg =
           q"""
-            object ${TermName(className.toString + "Type")} extends StructType[$className] with $parent {
+            object ${TermName(className.toString + "Type")} extends argon.nodes.StructType[$className] with $parent {
               override def wrapped(x: Exp[$className]) = ${className.toTermName}(x)
               override def typeArguments = Nil
               override def stagedClass = classOf[$className]
@@ -100,7 +100,7 @@ object StagedStructsMacro {
           */
         val ev =
           q"""
-            implicit def ${TermName(className.toString + "TypeEvidence")}: StructType[$className] = ${TermName(className.toString + "Type")}
+            implicit def ${TermName(className.toString + "TypeEvidence")}: argon.nodes.StructType[$className] = ${TermName(className.toString + "Type")}
           """
 
         /**
@@ -109,22 +109,31 @@ object StagedStructsMacro {
         val argss = constructorArgs.map{ args => args.map{
           case ValDef(_, termName, typeIdent, rhs) =>
             val mods = if (rhs == EmptyTree) Modifiers(Flag.PARAM) else Modifiers(Flag.PARAM | Flag.DEFAULTPARAM)
-            ValDef(mods, termName, typeIdent, rhs)
+            val rhsHack = if (rhs == EmptyTree) EmptyTree else q"implicitly[Type[$typeIdent]].fakeT"
+            ValDef(mods, termName, typeIdent, rhsHack)
         }}
-        val body = fields.map{
-          case ValDef(_, termName, typeIdent, rhs) =>
+        val body = constructorArgs.flatten.map{
+          case ValDef(_, termName, typeIdent, EmptyTree) =>
             q"${Literal(Constant(termName.toString))} -> $termName.s"
+          case ValDef(_, termName, typeIdent, rhs) =>
+            q"${Literal(Constant(termName.toString))} -> $termName.getOrElseCreate{$rhs}.s"
         }
 
         // TODO: We assume for now that struct annotation is always used within a trait - any way to be more general?
 
-        val mdef = q"def ${className.toTermName}(...$argss): $className = struct[$className]( ..$body )"
+        val mdef = q"def apply(...$argss)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = struct[$className]( ..$body )(implicitly[argon.nodes.StructType[$className]], ctx, state)"
+
+        val companionObject = q"""
+          object ${className.toTermName} {
+            $stg ; $mdef; $ev ; ..$evidences
+          }
+        """
 
         // Implicit object must come before class definition
-        val cc = q"$stg ; $ev ; $cls ; $mdef ; ..$evidences"
+        val cc = q"$cls ; $companionObject "
 
         // Debugging
-        // c.info(tree.pos, showCode(cc), force = true)
+        c.info(tree.pos, showCode(cc), force = true)
         // c.info(tree.pos, showRaw(mdef), force = true)
         cc
 
