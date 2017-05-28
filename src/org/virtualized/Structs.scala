@@ -57,7 +57,7 @@ object StagedStructsMacro {
             //q"var $termName: $typeIdent"
             c.abort(c.enclosingPosition, "virtualization of variable fields is currently unsupported")
           case ValDef(mods, termName, typeIdent, rhs) =>
-            q"""def $termName(implicit ctx: org.virtualized.SourceContext, state: argon.State): $typeIdent = field[$typeIdent](${Literal(Constant(termName.toString))})(implicitly[Type[$typeIdent]],ctx,state)"""
+            q"""def $termName(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $typeIdent = field[$typeIdent](${Literal(Constant(termName.toString))})(implicitly[Type[$typeIdent]],ctx,state)"""
         }
 
         val cls =
@@ -121,7 +121,7 @@ object StagedStructsMacro {
 
         // TODO: We assume for now that struct annotation is always used within a trait - any way to be more general?
 
-        val mdef = q"def apply(...$argss)(implicit ctx: org.virtualized.SourceContext, state: argon.State): $className = struct[$className]( ..$body )(implicitly[argon.nodes.StructType[$className]], ctx, state)"
+        val mdef = q"def apply(...$argss)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = struct[$className]( ..$body )(implicitly[argon.nodes.StructType[$className]], ctx, state)"
 
         val companionObject = q"""
           object ${className.toTermName} {
