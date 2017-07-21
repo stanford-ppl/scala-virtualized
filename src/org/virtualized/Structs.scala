@@ -60,13 +60,6 @@ object StagedStructsMacro {
             q"""def $termName(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $typeIdent = field[$typeIdent](${Literal(Constant(termName.toString))})(implicitly[Type[$typeIdent]],ctx,state)"""
         }
 
-        val cls =
-          q"""
-            case class $className(s: Exp[$className]) extends Struct[$className] {
-              ..$fieldList
-            }
-           """
-
         /**
           * Typeclass evidences and lookup traits
           */
@@ -128,6 +121,29 @@ object StagedStructsMacro {
             $stg ; $mdef; $ev ; ..$evidences
           }
         """
+
+        val copyMethod = {
+          val optionalArgss = constructorArgs.map{args => args.map{
+            case ValDef(_, termName, typeIdent, rhs) =>
+              ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), termName, typeIdent, q"implicitly[Type[$typeIdent]].fakeT") //q"this.$termName")
+          }}
+          val actualArgss = constructorArgs.map{args => args.map{
+            case ValDef(_, termName, _, _) => q"$termName.getOrElseCreate{ this.$termName }"
+          }}
+
+          q"""
+             def copy(...$optionalArgss)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+               ${className.toTermName}.apply(...$actualArgss)
+             }
+           """
+        }
+
+        val cls =
+          q"""
+            case class $className(s: Exp[$className]) extends Struct[$className] {
+              ..$fieldList ; $copyMethod
+            }
+           """
 
         // Implicit object must come before class definition
         val cc = q"$cls ; $companionObject "
