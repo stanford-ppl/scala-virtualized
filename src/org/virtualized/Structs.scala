@@ -128,12 +128,12 @@ object StagedStructsMacro {
               ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), termName, typeIdent, q"implicitly[Type[$typeIdent]].fakeT") //q"this.$termName")
           }}
           val actualArgss = constructorArgs.map{args => args.map{
-            case ValDef(_, termName, _, _) => q"$termName.getOrElseCreate{ this.$termName }"
+            case ValDef(_, termName, _, _) => q"$termName.getOrElseCreate{ this.$termName(ctx, state) }"
           }}
 
           q"""
              def copy(...$optionalArgss)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
-               ${className.toTermName}.apply(...$actualArgss)
+               ${className.toTermName}.apply(...$actualArgss)(ctx, state)
              }
            """
         }
