@@ -1,4 +1,4 @@
-package org.virtualized
+package virtualized
 
 import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
@@ -62,7 +62,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
   object VirtualizationTransformer {
     def apply(tree: Tree) = {
       val t = new VirtualizationTransformer().apply(tree)
-      log("(org.virtualized, Seq[Features]): " + t, 2)
+      log("(edu.stanford.dawn, Seq[Features]): " + t, 2)
       t
     }
   }

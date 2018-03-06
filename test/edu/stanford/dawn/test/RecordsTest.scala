@@ -1,6 +1,6 @@
-package org.virtualized.test
+package virtualized.test
 
-import org.virtualized._
+import edu.stanford.dawn._
 import org.scalatest.{ FlatSpec, Matchers }
 import scala.language.reflectiveCalls
 
@@ -54,9 +54,9 @@ trait RecordsTests extends FlatSpec with Matchers with RecordOps {
     m(person).asInstanceOf[RefinedManifest[_]].fields should contain inOrderOnly (("name", manifest[String]), ("age", manifest[Int]), ("height", manifest[Double]))
   }
 
-  "anonymous records" should "be org.virtualized" in anonymous()
+  "anonymous records" should "be edu.stanford.dawn" in anonymous()
 
-  "named records" should "be org.virtualized" in named()
+  "named records" should "be edu.stanford.dawn" in named()
   
   it should "not compile with methods" in {
     """@mRecord

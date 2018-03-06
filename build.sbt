@@ -1,8 +1,10 @@
-name := "virtualized"
-
-organization := "org.virtualized"
-
 scalaVersion in ThisBuild := "2.12.1"
+
+organization in ThisBuild := "edu.stanford.dawn"
+
+version in ThisBuild := "0.1-SNAPSHOT"
+
+name := "virtualized"
 
 //publish
 val suffix = ""

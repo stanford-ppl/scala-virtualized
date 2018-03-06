@@ -1,4 +1,4 @@
-package org.virtualized
+package virtualized
 
 import scala.reflect.macros.blackbox
 
@@ -52,13 +52,13 @@ private[virtualized] object BitsTypeclassMacro extends TypeclassMacro {
         val cls =
         q"""
           class ${TypeName(className.toString + "Bits")}()(implicit ..$implicits) extends Bits[$className] {
-            override def zero(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+            override def zero(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
               $classTerm ( ..$zero )(ctx,state)  // Calls constructor
             }
-            override def one(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+            override def one(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
               $classTerm ( ..$one )(ctx,state)   // Calls constructor
             }
-            override def random(max: Option[$className])(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+            override def random(max: Option[$className])(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
               ..$maxes
               $classTerm (..$rands)(ctx,state)   // Calls constructor
             }

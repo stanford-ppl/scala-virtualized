@@ -1,12 +1,12 @@
-package org.virtualized
+package virtualized
 
 import language.experimental.macros
 import scala.reflect.macros.blackbox.Context
 import scala.annotation.StaticAnnotation
 
 // TODO: Having a weird issue with adding SourceContext to updates
-// found: org.virtualized.SourceContext
-// expected: org.virtualized.SourceContext.type
+// found: virtualized.SourceContext
+// expected: virtualized.SourceContext.type
 class CurriedUpdate extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro CurriedUpdate.curry
 }
@@ -31,7 +31,7 @@ object CurriedUpdate {
 
         val imprt   = q"import scala.language.experimental.macros"
         val implic: Modifiers = Modifiers(Flag.IMPLICIT | Flag.PARAM)
-        //val ctx = List(List(ValDef(implic, TermName("ctx"), q"_root_.org.virtualized.SourceContext", EmptyTree)))
+        //val ctx = List(List(ValDef(implic, TermName("ctx"), q"_root_.virtualized.SourceContext", EmptyTree)))
         //val params = vparamss ++ ctx
         val updateR = DefDef(mods, TermName(updateRenamed), tparams, vparamss, tpt, rhs)
         val updateC = if (mods.hasFlag(Flag.OVERRIDE)) {

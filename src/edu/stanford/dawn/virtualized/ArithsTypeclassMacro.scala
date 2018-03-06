@@ -1,4 +1,4 @@
-package org.virtualized
+package virtualized
 
 import scala.reflect.macros.blackbox
 
@@ -53,26 +53,26 @@ private[virtualized] object ArithsTypeclassMacro extends TypeclassMacro {
         val cls =
           q"""
             class ${TypeName(className.toString + "Arith")}()(implicit ..$implicits) extends Arith[$className] {
-              override def negate(a: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+              override def negate(a: $className)(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
                 ..$aFieldsGet
                 $classTerm ( ..$neg )(ctx,state)
               }
-              override def plus(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+              override def plus(a: $className, b: $className)(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
                 $classTerm ( ..$plus )(ctx,state)
               }
-              override def minus(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+              override def minus(a: $className, b: $className)(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
                 $classTerm ( ..$minus )(ctx,state)
               }
-              override def times(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+              override def times(a: $className, b: $className)(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
                 $classTerm ( ..$times )(ctx,state)
               }
-              override def divide(a: $className, b: $className)(implicit ctx: org.virtualized.SourceContext, state: argon.core.State): $className = {
+              override def divide(a: $className, b: $className)(implicit ctx: virtualized.SourceContext, state: argon.core.State): $className = {
                 ..$aFieldsGet
                 ..$bFieldsGet
                 $classTerm ( ..$divide )(ctx,state)
