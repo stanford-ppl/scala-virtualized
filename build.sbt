@@ -1,6 +1,6 @@
 scalaVersion in ThisBuild := "2.12.1"
 
-organization in ThisBuild := "edu.stanford.dawn"
+organization in ThisBuild := "edu.stanford.cs.dawn"
 
 version in ThisBuild := "0.1-SNAPSHOT"
 
@@ -8,7 +8,7 @@ name := "virtualized"
 
 //publish
 val suffix = ""
-val versionNumber = "0.2"
+val versionNumber = "0.1-SNAPSHOT"
 version := versionNumber + suffix
 isSnapshot := true
 

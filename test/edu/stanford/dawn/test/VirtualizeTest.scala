@@ -1,6 +1,6 @@
 package virtualized.test
 
-import edu.stanford.dawn._
+import edu.stanford.cs.dawn._
 import org.scalatest.{ FlatSpec, Matchers }
 import scala.language.postfixOps
 
@@ -227,7 +227,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
 
   }*/
 
-  // Should use inner edu.stanford.dawn `__ifThenElse`
+  // Should use inner edu.stanford.cs.dawn `__ifThenElse`
   "virtualizeInnerIfTest" should "be virtualized" in {
 
     // This overrides the `__ifThenElse` in `EmbeddedControls`
@@ -462,7 +462,7 @@ class VirtualizeTest extends FlatSpec with Matchers with EmbeddedControls {
   }
 
   "virtualizePlusTest" should "be virtualized" in {
-    def infix_+(a1: Any, a2: Any) = a2.toString + a1 //+ on Any is not edu.stanford.dawn!
+    def infix_+(a1: Any, a2: Any) = a2.toString + a1 //+ on Any is not edu.stanford.cs.dawn!
     @virtualize
     def virtualizePlusTest(a: String, b: List[Boolean]) = a + b //only "StringLiteral"+b will be virtualized!
     virtualizePlusTest("you", List(false)) should be("youList(false)")

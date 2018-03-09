@@ -62,7 +62,7 @@ trait LanguageVirtualization extends MacroModule with TransformationUtils with D
   object VirtualizationTransformer {
     def apply(tree: Tree) = {
       val t = new VirtualizationTransformer().apply(tree)
-      log("(edu.stanford.dawn, Seq[Features]): " + t, 2)
+      log("(edu.stanford.cs.dawn, Seq[Features]): " + t, 2)
       t
     }
   }

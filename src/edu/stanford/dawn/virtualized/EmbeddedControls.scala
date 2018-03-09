@@ -4,10 +4,10 @@ import language.experimental.macros
 import scala.reflect.macros.whitebox.Context
 
 /**
- * Default implementation of edu.stanford.dawn Scala control structures.
+ * Default implementation of edu.stanford.cs.dawn Scala control structures.
  *
  * This trait is adapted from the `EmbeddedControls` trait in
- * Scala edu.stanford.dawn.  See also
+ * Scala edu.stanford.cs.dawn.  See also
  * [[https://raw.github.com/namin/scala/topic-virt/src/library/scala/EmbeddedControls.scala]]
  *
  * The `EmbeddedControls` trait provides method definitions where
@@ -16,7 +16,7 @@ import scala.reflect.macros.whitebox.Context
  * DSLs a chance to provide their own definitions and thereby override
  * the standard interpretation of the compiler.
  *
- * Example: When faced with an `if` construct, the `@edu.stanford.dawn`
+ * Example: When faced with an `if` construct, the `@edu.stanford.cs.dawn`
  * macro annotation will generate a method call:
  * `__ifThenElse(cond, thenp, elsep)`
  *

@@ -30,7 +30,6 @@ trait RecordOps {
      * Record(name = "Hans", age = 7)
      * }}}
      */
-
     def applyDynamicNamed(method: String)(v: (String, Any)*): Any =
       macro RecordMacros.apply_impl[Rep[_]]
 
@@ -71,7 +70,7 @@ class RecordMacros(val c: Context) {
     }
 
     /**
-     * Macro that implements [[Record.applyDynamicNamed]].
+     * Macro that implements Record.applyDynamicNamed.
      */
     def recordApply(tp: Type)(v: Seq[c.Expr[(String, Any)]]): c.Expr[Any] = {
       val constantLiteralsMsg = "Records can only be constructed with constant keys (string literals)."
@@ -113,7 +112,7 @@ class RecordMacros(val c: Context) {
       val tpTree = tq"Record { ..$vals }"
       c.Expr(q"""
         record_new[$tpTree](..${tuples.map(x => q"(${x._1}, ${x._2})")})(
-            ${refinedManifest(schema)}.asInstanceOf[_root_.edu.stanford.dawn.RefinedManifest[$tpTree]])
+            ${refinedManifest(schema)}.asInstanceOf[_root_.edu.stanford.cs.dawn.RefinedManifest[$tpTree]])
       """)
     }
 
@@ -138,7 +137,7 @@ class RecordMacros(val c: Context) {
     def materializeManifest[A <: Record : c.WeakTypeTag](ev: Tree): Tree ={
       val tp = c.weakTypeTag[A].tpe
 
-      q"${refinedManifest(recordTypes(tp))}.asInstanceOf[_root_.edu.stanford.dawn.RefinedManifest[$tp]]"
+      q"${refinedManifest(recordTypes(tp))}.asInstanceOf[_root_.edu.stanford.cs.dawn.RefinedManifest[$tp]]"
     }
 
 
@@ -162,7 +161,7 @@ class RecordMacros(val c: Context) {
       if(tpe <:< typeOf[Record]) refinedManifest(recordTypes(tpe)) else q"manifest[$tpe]"
 
     private def refinedManifest(schema: Seq[(String, Type)]): Tree = q"""
-      new _root_.edu.stanford.dawn.RefinedManifest[Record] {
+      new _root_.edu.stanford.cs.dawn.RefinedManifest[Record] {
         val fields = _root_.scala.List(..${schema.map(v => q"(${v._1}, ${tpeManifest(v._2)})")})
         def runtimeClass: Class[_] = classOf[Record]
       }
