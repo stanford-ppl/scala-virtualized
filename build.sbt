@@ -2,14 +2,12 @@ scalaVersion in ThisBuild := "2.12.1"
 
 organization in ThisBuild := "edu.stanford.cs.dawn"
 
-version in ThisBuild := "0.1-SNAPSHOT"
-
 name := "virtualized"
 
 //publish
-val suffix = ""
-val versionNumber = "0.1-SNAPSHOT"
-version := versionNumber + suffix
+val suffix = "-SNAPSHOT"
+val versionNumber = "0.1"
+version in ThisBuild := versionNumber + suffix
 isSnapshot := true
 
 //dependencies versions
